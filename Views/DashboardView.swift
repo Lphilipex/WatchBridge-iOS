@@ -194,6 +194,84 @@ struct DashboardView: View {
                             }
                         }
                     }
+
+                    // MARK: - Painel de diagnóstico
+
+                    Section("Painel de diagnóstico") {
+
+                        LabeledContent(
+                            "Bluetooth",
+                            value: bluetooth.isBluetoothReady
+                                ? "Disponível"
+                                : "Indisponível"
+                        )
+
+                        LabeledContent(
+                            "Conexão",
+                            value: bluetooth.isConnected
+                                ? "Conectado"
+                                : "Desconectado"
+                        )
+
+                        LabeledContent(
+                            "Dispositivos encontrados",
+                            value: "\(bluetooth.devices.count)"
+                        )
+
+                        LabeledContent(
+                            "Serviços GATT",
+                            value: "\(bluetooth.discoveredServices.count)"
+                        )
+
+                        LabeledContent(
+                            "Características",
+                            value: "\(bluetooth.discoveredCharacteristics.count)"
+                        )
+
+                        LabeledContent(
+                            "Notificações",
+                            value: "\(bluetooth.notificationEvents.count)"
+                        )
+
+                        LabeledContent(
+                            "Eventos registrados",
+                            value: "\(bluetooth.diagnosticEvents.count)"
+                        )
+
+                        ShareLink(
+                            item: bluetooth.diagnosticReport,
+                            subject: Text("Relatório WatchBridge"),
+                            preview: SharePreview(
+                                "Diagnóstico WatchBridge"
+                            )
+                        ) {
+                            Label(
+                                "Exportar relatório de diagnóstico",
+                                systemImage: "square.and.arrow.up"
+                            )
+                        }
+                    }
+
+                    // MARK: - Histórico de diagnóstico
+
+                    Section("Histórico de diagnóstico") {
+
+                        if bluetooth.diagnosticEvents.isEmpty {
+                            Text("Nenhum evento registrado.")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            ForEach(
+                                Array(
+                                    bluetooth.diagnosticEvents.prefix(10).enumerated()
+                                ),
+                                id: \.offset
+                            ) { _, event in
+                                Text(event)
+                                    .font(.caption)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                    }
                 }
             }
             .padding()

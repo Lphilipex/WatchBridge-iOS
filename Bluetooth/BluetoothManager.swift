@@ -3,7 +3,6 @@ import Foundation
 import CoreBluetooth
 import Combine
 
-
 struct BluetoothCharacteristicInfo: Identifiable {
     let characteristic: CBCharacteristic
     var value: String = "Ainda não consultada"
@@ -59,7 +58,6 @@ struct BluetoothCharacteristicInfo: Identifiable {
     }
 }
 
-
 final class BluetoothManager: NSObject,
     ObservableObject,
     CBCentralManagerDelegate,
@@ -71,6 +69,8 @@ final class BluetoothManager: NSObject,
     @Published var isConnected = false
 
     @Published var notificationEvents: [String] = []
+    @Published var diagnosticEvents: [String] = []
+
     @Published var devices: [WatchDevice] = []
     @Published var discoveredServices: [String] = []
     @Published var discoveredCharacteristics: [BluetoothCharacteristicInfo] = []
@@ -81,6 +81,85 @@ final class BluetoothManager: NSObject,
     private var central: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
 
+    // MARK: - Relatório de diagnóstico
+
+    private var diagnosticDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
+        return formatter
+    }()
+
+    var diagnosticReport: String {
+        var report = """
+        WATCHBRIDGE - RELATÓRIO DE DIAGNÓSTICO
+        ======================================
+
+        Data da exportação: \(diagnosticDateFormatter.string(from: Date()))
+        Estado do Bluetooth: \(isBluetoothReady ? "Disponível" : "Indisponível")
+        Estado da conexão: \(isConnected ? "Conectado" : "Desconectado")
+        Dispositivo: \(connectedDeviceName ?? "Nenhum")
+        Status atual: \(status)
+
+        RESUMO
+        ------
+        Dispositivos encontrados: \(devices.count)
+        Serviços identificados: \(discoveredServices.count)
+        Características identificadas: \(discoveredCharacteristics.count)
+        Eventos de notificações: \(notificationEvents.count)
+        Eventos de diagnóstico: \(diagnosticEvents.count)
+
+        SERVIÇOS GATT
+        -------------
+        """
+
+        if discoveredServices.isEmpty {
+            report += "\nNenhum serviço identificado."
+        } else {
+            for service in discoveredServices {
+                report += "\n- \(service)"
+            }
+        }
+
+        report += "\n\nCARACTERÍSTICAS BLUETOOTH\n-------------------------"
+
+        if discoveredCharacteristics.isEmpty {
+            report += "\nNenhuma característica identificada."
+        } else {
+            for characteristic in discoveredCharacteristics {
+                report += """
+
+                
+                Serviço: \(characteristic.serviceUUID)
+                UUID: \(characteristic.uuid)
+                Propriedades: \(characteristic.propertiesDescription)
+                Leitura permitida: \(characteristic.isReadable ? "Sim" : "Não")
+                Notificações: \(characteristic.notificationsEnabled ? "Ativadas" : "Desativadas")
+                Valor: \(characteristic.value)
+                """
+            }
+        }
+
+        report += "\n\nHISTÓRICO DE NOTIFICAÇÕES\n-------------------------"
+
+        if notificationEvents.isEmpty {
+            report += "\nNenhuma notificação recebida."
+        } else {
+            report += "\n" + notificationEvents.joined(separator: "\n")
+        }
+
+        report += "\n\nHISTÓRICO DE DIAGNÓSTICO\n------------------------"
+
+        if diagnosticEvents.isEmpty {
+            report += "\nNenhum evento registrado."
+        } else {
+            report += "\n" + diagnosticEvents.joined(separator: "\n")
+        }
+
+        report += "\n\nFim do relatório."
+
+        return report
+    }
+
     override init() {
         super.init()
 
@@ -88,6 +167,31 @@ final class BluetoothManager: NSObject,
             delegate: self,
             queue: .main
         )
+    }
+
+    // MARK: - Registro de eventos
+
+    private func log(_ message: String) {
+        let date = diagnosticDateFormatter.string(from: Date())
+        let event = "[\(date)] \(message)"
+
+        diagnosticEvents.insert(event, at: 0)
+
+        if diagnosticEvents.count > 100 {
+            diagnosticEvents.removeLast()
+        }
+
+        print(event)
+    }
+
+    private func logNotification(_ message: String) {
+        notificationEvents.insert(message, at: 0)
+
+        if notificationEvents.count > 50 {
+            notificationEvents.removeLast()
+        }
+
+        log("Notificação: \(message)")
     }
 
     // MARK: - Estado do Bluetooth
@@ -99,22 +203,27 @@ final class BluetoothManager: NSObject,
         case .poweredOn:
             isBluetoothReady = true
             status = "Bluetooth disponível"
+            log("Bluetooth ligado e disponível.")
 
         case .poweredOff:
             isBluetoothReady = false
             status = "Bluetooth desligado"
+            log("Bluetooth desligado.")
 
         case .unauthorized:
             isBluetoothReady = false
             status = "Permissão Bluetooth negada"
+            log("Permissão de Bluetooth não autorizada.")
 
         case .unsupported:
             isBluetoothReady = false
             status = "Bluetooth não suportado"
+            log("Bluetooth não suportado neste dispositivo.")
 
         default:
             isBluetoothReady = false
             status = "Verificando Bluetooth..."
+            log("Estado do Bluetooth: \(central.state.rawValue).")
         }
     }
 
@@ -123,6 +232,7 @@ final class BluetoothManager: NSObject,
     func startScan() {
         guard central.state == .poweredOn else {
             status = "Ative o Bluetooth"
+            log("Busca não iniciada: Bluetooth indisponível.")
             return
         }
 
@@ -130,6 +240,8 @@ final class BluetoothManager: NSObject,
 
         isScanning = true
         status = "Procurando dispositivos..."
+
+        log("Busca BLE iniciada.")
 
         central.scanForPeripherals(
             withServices: nil,
@@ -143,6 +255,8 @@ final class BluetoothManager: NSObject,
         central.stopScan()
         isScanning = false
         status = "Busca finalizada"
+
+        log("Busca BLE finalizada. Dispositivos encontrados: \(devices.count).")
     }
 
     func centralManager(
@@ -162,6 +276,7 @@ final class BluetoothManager: NSObject,
             devices[index] = device
         } else {
             devices.append(device)
+            log("Dispositivo encontrado: \(device.name), sinal: \(RSSI) dBm.")
         }
     }
 
@@ -170,6 +285,7 @@ final class BluetoothManager: NSObject,
     func connect(to device: WatchDevice) {
         guard central.state == .poweredOn else {
             status = "Bluetooth indisponível"
+            log("Conexão não iniciada: Bluetooth indisponível.")
             return
         }
 
@@ -188,6 +304,8 @@ final class BluetoothManager: NSObject,
         connectedDeviceName = device.name
         status = "Conectando a \(device.name)..."
 
+        log("Solicitada conexão com \(device.name).")
+
         central.connect(
             device.peripheral,
             options: nil
@@ -196,10 +314,12 @@ final class BluetoothManager: NSObject,
 
     func disconnect() {
         guard let peripheral = connectedPeripheral else {
+            log("Solicitação de desconexão ignorada: nenhum dispositivo conectado.")
             return
         }
 
         status = "Desconectando..."
+        log("Solicitada desconexão de \(peripheral.name ?? "dispositivo").")
 
         central.cancelPeripheralConnection(peripheral)
     }
@@ -213,6 +333,9 @@ final class BluetoothManager: NSObject,
 
         connectedDeviceName = peripheral.name ?? "Dispositivo conectado"
         status = "Conectado a \(connectedDeviceName ?? "dispositivo")"
+
+        log("Conexão estabelecida com \(connectedDeviceName ?? "dispositivo").")
+        log("Iniciando descoberta dos serviços GATT.")
 
         peripheral.delegate = self
         peripheral.discoverServices(nil)
@@ -231,7 +354,9 @@ final class BluetoothManager: NSObject,
         status = "Não foi possível conectar"
 
         if let error = error {
-            print("Erro de conexão BLE: \(error.localizedDescription)")
+            log("Falha na conexão: \(error.localizedDescription)")
+        } else {
+            log("Falha na conexão: motivo não informado.")
         }
     }
 
@@ -250,6 +375,12 @@ final class BluetoothManager: NSObject,
         discoveredCharacteristics.removeAll()
 
         status = "Dispositivo desconectado"
+
+        if let error = error {
+            log("Dispositivo desconectado com erro: \(error.localizedDescription)")
+        } else {
+            log("Dispositivo desconectado normalmente.")
+        }
     }
 
     // MARK: - Descoberta de serviços GATT
@@ -260,12 +391,13 @@ final class BluetoothManager: NSObject,
     ) {
         if let error = error {
             status = "Erro ao procurar serviços"
-            print("Erro GATT: \(error.localizedDescription)")
+            log("Erro na descoberta de serviços: \(error.localizedDescription)")
             return
         }
 
         guard let services = peripheral.services else {
             status = "Nenhum serviço encontrado"
+            log("Nenhum serviço GATT encontrado.")
             return
         }
 
@@ -275,7 +407,11 @@ final class BluetoothManager: NSObject,
 
         status = "\(services.count) serviço(s) encontrado(s)"
 
+        log("Descoberta concluída: \(services.count) serviço(s) GATT.")
+
         for service in services {
+            log("Solicitando características do serviço \(service.uuid.uuidString).")
+
             peripheral.discoverCharacteristics(
                 nil,
                 for: service
@@ -291,11 +427,12 @@ final class BluetoothManager: NSObject,
         error: Error?
     ) {
         if let error = error {
-            print("Erro nas características: \(error.localizedDescription)")
+            log("Erro ao descobrir características de \(service.uuid): \(error.localizedDescription)")
             return
         }
 
         guard let characteristics = service.characteristics else {
+            log("Nenhuma característica encontrada no serviço \(service.uuid).")
             return
         }
 
@@ -308,10 +445,18 @@ final class BluetoothManager: NSObject,
                 where: { $0.id == info.id }
             ) {
                 discoveredCharacteristics.append(info)
+
+                log(
+                    "Característica encontrada: \(info.uuid). Propriedades: \(info.propertiesDescription)."
+                )
             }
         }
 
         status = "Características Bluetooth identificadas"
+
+        log(
+            "Serviço \(service.uuid.uuidString): \(characteristics.count) característica(s) encontrada(s)."
+        )
     }
 
     // MARK: - Leitura de características
@@ -322,99 +467,107 @@ final class BluetoothManager: NSObject,
         guard isConnected,
               let peripheral = connectedPeripheral else {
             status = "Nenhum dispositivo conectado"
+            log("Leitura não realizada: nenhum dispositivo conectado.")
             return
         }
 
         guard info.isReadable else {
             status = "Esta característica não permite leitura"
+            log("Leitura não permitida para a característica \(info.uuid).")
             return
         }
 
         status = "Solicitando leitura..."
+        log("Solicitada leitura da característica \(info.uuid).")
 
         peripheral.readValue(
             for: info.characteristic
         )
     }
 
-// MARK: - Notificações BLE
+    // MARK: - Notificações BLE
 
-func toggleNotifications(
-    _ info: BluetoothCharacteristicInfo
-) {
-    guard isConnected,
-          let peripheral = connectedPeripheral else {
-        status = "Nenhum dispositivo conectado"
-        return
-    }
+    func toggleNotifications(
+        _ info: BluetoothCharacteristicInfo
+    ) {
+        guard isConnected,
+              let peripheral = connectedPeripheral else {
+            status = "Nenhum dispositivo conectado"
+            log("Notificação não configurada: nenhum dispositivo conectado.")
+            return
+        }
 
-    guard info.supportsNotifications else {
-        status = "Característica não suporta notificações"
-        return
-    }
+        guard info.supportsNotifications else {
+            status = "Característica não suporta notificações"
+            log("Característica \(info.uuid) não suporta notificações.")
+            return
+        }
 
-    let enable = !info.notificationsEnabled
+        let enable = !info.notificationsEnabled
 
-    status = enable
-        ? "Ativando notificações..."
-        : "Desativando notificações..."
+        status = enable
+            ? "Ativando notificações..."
+            : "Desativando notificações..."
 
-    peripheral.setNotifyValue(
-        enable,
-        for: info.characteristic
-    )
-}
-
-// MARK: - Estado das notificações
-
-func peripheral(
-    _ peripheral: CBPeripheral,
-    didUpdateNotificationStateFor characteristic: CBCharacteristic,
-    error: Error?
-) {
-    let characteristicID = """
-    \(characteristic.service?.uuid.uuidString ?? "Desconhecido")-\(characteristic.uuid.uuidString)
-    """
-
-    guard let index = discoveredCharacteristics.firstIndex(
-        where: { $0.id == characteristicID }
-    ) else {
-        return
-    }
-
-    if let error = error {
-        status = "Erro ao configurar notificação"
-
-        notificationEvents.insert(
-            "Erro: \(error.localizedDescription)",
-            at: 0
+        log(
+            "\(enable ? "Solicitada ativação" : "Solicitada desativação") das notificações da característica \(info.uuid)."
         )
 
-        return
-    }
-
-    discoveredCharacteristics[index].notificationsEnabled =
-        characteristic.isNotifying
-
-    if characteristic.isNotifying {
-        status = "Notificações ativadas"
-
-        notificationEvents.insert(
-            "Notificações ativadas: \(characteristic.uuid.uuidString)",
-            at: 0
-        )
-    } else {
-        status = "Notificações desativadas"
-
-        notificationEvents.insert(
-            "Notificações desativadas: \(characteristic.uuid.uuidString)",
-            at: 0
+        peripheral.setNotifyValue(
+            enable,
+            for: info.characteristic
         )
     }
-}
 
+    // MARK: - Estado das notificações
 
-    
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didUpdateNotificationStateFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        let characteristicID = """
+        \(characteristic.service?.uuid.uuidString ?? "Desconhecido")-\(characteristic.uuid.uuidString)
+        """
+
+        guard let index = discoveredCharacteristics.firstIndex(
+            where: { $0.id == characteristicID }
+        ) else {
+            log("Atualização de notificação recebida para característica não registrada: \(characteristic.uuid).")
+            return
+        }
+
+        if let error = error {
+            status = "Erro ao configurar notificação"
+
+            log("Erro ao configurar notificação: \(error.localizedDescription)")
+
+            logNotification(
+                "Erro: \(error.localizedDescription)"
+            )
+
+            return
+        }
+
+        discoveredCharacteristics[index].notificationsEnabled =
+            characteristic.isNotifying
+
+        if characteristic.isNotifying {
+            status = "Notificações ativadas"
+
+            logNotification(
+                "Notificações ativadas: \(characteristic.uuid.uuidString)"
+            )
+        } else {
+            status = "Notificações desativadas"
+
+            logNotification(
+                "Notificações desativadas: \(characteristic.uuid.uuidString)"
+            )
+        }
+    }
+
+    // MARK: - Recebimento de dados BLE
 
     func peripheral(
         _ peripheral: CBPeripheral,
@@ -428,6 +581,7 @@ func peripheral(
         guard let index = discoveredCharacteristics.firstIndex(
             where: { $0.id == characteristicID }
         ) else {
+            log("Dados recebidos de uma característica não registrada: \(characteristic.uuid).")
             return
         }
 
@@ -436,6 +590,8 @@ func peripheral(
                 "Erro: \(error.localizedDescription)"
 
             status = "Erro durante a leitura"
+
+            log("Erro ao receber dados da característica \(characteristic.uuid): \(error.localizedDescription)")
             return
         }
 
@@ -444,6 +600,8 @@ func peripheral(
                 "Nenhum dado recebido"
 
             status = "Leitura sem dados"
+
+            log("Nenhum dado recebido da característica \(characteristic.uuid).")
             return
         }
 
@@ -453,15 +611,15 @@ func peripheral(
 
         discoveredCharacteristics[index].value = hexadecimal
         status = "Leitura concluída"
-        if characteristic.isNotifying {
-    notificationEvents.insert(
-        "Atualização recebida: \(characteristic.uuid.uuidString) = \(hexadecimal)",
-        at: 0
-    )
 
-    if notificationEvents.count > 50 {
-        notificationEvents.removeLast()
-    }
-}
+        log(
+            "Dados recebidos da característica \(characteristic.uuid.uuidString): \(hexadecimal)"
+        )
+
+        if characteristic.isNotifying {
+            logNotification(
+                "Atualização recebida: \(characteristic.uuid.uuidString) = \(hexadecimal)"
+            )
+        }
     }
 }
