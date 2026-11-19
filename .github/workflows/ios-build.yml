@@ -1,0 +1,53 @@
+
+name: WatchBridge iOS Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build iOS App
+    runs-on: macos-15
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Verificar Xcode
+        run: xcodebuild -version
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Gerar projeto Xcode
+        run: xcodegen generate
+
+      - name: Compilar aplicativo
+        run: |
+          xcodebuild \
+            -project WatchBridge.xcodeproj \
+            -scheme WatchBridge \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Compactar aplicativo
+        run: |
+          cd build/Build/Products/Debug-iphonesimulator
+          zip -r WatchBridge-Simulator.zip WatchBridge.app
+
+      - name: Disponibilizar aplicativo compilado
+        uses: actions/upload-artifact@v4
+        with:
+          name: WatchBridge-Simulator
+          path: build/Build/Products/Debug-iphonesimulator/WatchBridge-Simulator.zip
+          retention-days: 7
