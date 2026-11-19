@@ -3,6 +3,55 @@ import Foundation
 import CoreBluetooth
 import Combine
 
+struct BluetoothCharacteristicInfo: Identifiable {
+    let characteristic: CBCharacteristic
+    var value: String = "Ainda não consultada"
+
+    var id: String {
+        "\(serviceUUID)-\(uuid)"
+    }
+
+    var serviceUUID: String {
+        characteristic.service?.uuid.uuidString ?? "Desconhecido"
+    }
+
+    var uuid: String {
+        characteristic.uuid.uuidString
+    }
+
+    var isReadable: Bool {
+        characteristic.properties.contains(.read)
+    }
+
+    var propertiesDescription: String {
+        var properties: [String] = []
+
+        if characteristic.properties.contains(.read) {
+            properties.append("Leitura")
+        }
+
+        if characteristic.properties.contains(.write) {
+            properties.append("Escrita")
+        }
+
+        if characteristic.properties.contains(.writeWithoutResponse) {
+            properties.append("Escrita sem resposta")
+        }
+
+        if characteristic.properties.contains(.notify) {
+            properties.append("Notificações")
+        }
+
+        if characteristic.properties.contains(.indicate) {
+            properties.append("Indicações")
+        }
+
+        return properties.isEmpty
+            ? "Propriedades não identificadas"
+            : properties.joined(separator: ", ")
+    }
+}
+
 final class BluetoothManager: NSObject,
     ObservableObject,
     CBCentralManagerDelegate,
@@ -15,7 +64,7 @@ final class BluetoothManager: NSObject,
 
     @Published var devices: [WatchDevice] = []
     @Published var discoveredServices: [String] = []
-    @Published var discoveredCharacteristics: [String] = []
+    @Published var discoveredCharacteristics: [BluetoothCharacteristicInfo] = []
 
     @Published var connectedDeviceName: String?
     @Published var status = "Aguardando Bluetooth"
@@ -157,8 +206,6 @@ final class BluetoothManager: NSObject,
         status = "Conectado a \(connectedDeviceName ?? "dispositivo")"
 
         peripheral.delegate = self
-
-        // Solicita a lista de serviços GATT.
         peripheral.discoverServices(nil)
     }
 
@@ -169,6 +216,8 @@ final class BluetoothManager: NSObject,
     ) {
         isConnecting = false
         isConnected = false
+        connectedDeviceName = nil
+        connectedPeripheral = nil
 
         status = "Não foi possível conectar"
 
@@ -217,7 +266,6 @@ final class BluetoothManager: NSObject,
 
         status = "\(services.count) serviço(s) encontrado(s)"
 
-        // Solicita as características de cada serviço.
         for service in services {
             peripheral.discoverCharacteristics(
                 nil,
@@ -243,15 +291,79 @@ final class BluetoothManager: NSObject,
         }
 
         for characteristic in characteristics {
-            let information = """
-            Serviço: \(service.uuid.uuidString)
-            Característica: \(characteristic.uuid.uuidString)
-            Propriedades: \(characteristic.properties)
-            """
+            let info = BluetoothCharacteristicInfo(
+                characteristic: characteristic
+            )
 
-            discoveredCharacteristics.append(information)
+            if !discoveredCharacteristics.contains(
+                where: { $0.id == info.id }
+            ) {
+                discoveredCharacteristics.append(info)
+            }
         }
 
         status = "Características Bluetooth identificadas"
+    }
+
+    // MARK: - Leitura de características
+
+    func readCharacteristic(
+        _ info: BluetoothCharacteristicInfo
+    ) {
+        guard isConnected,
+              let peripheral = connectedPeripheral else {
+            status = "Nenhum dispositivo conectado"
+            return
+        }
+
+        guard info.isReadable else {
+            status = "Esta característica não permite leitura"
+            return
+        }
+
+        status = "Solicitando leitura..."
+
+        peripheral.readValue(
+            for: info.characteristic
+        )
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didUpdateValueFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        let characteristicID = """
+        \(characteristic.service?.uuid.uuidString ?? "Desconhecido")-\(characteristic.uuid.uuidString)
+        """
+
+        guard let index = discoveredCharacteristics.firstIndex(
+            where: { $0.id == characteristicID }
+        ) else {
+            return
+        }
+
+        if let error = error {
+            discoveredCharacteristics[index].value =
+                "Erro: \(error.localizedDescription)"
+
+            status = "Erro durante a leitura"
+            return
+        }
+
+        guard let data = characteristic.value else {
+            discoveredCharacteristics[index].value =
+                "Nenhum dado recebido"
+
+            status = "Leitura sem dados"
+            return
+        }
+
+        let hexadecimal = data.map {
+            String(format: "%02X", $0)
+        }.joined(separator: " ")
+
+        discoveredCharacteristics[index].value = hexadecimal
+        status = "Leitura concluída"
     }
 }

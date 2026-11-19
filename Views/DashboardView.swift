@@ -34,13 +34,16 @@ struct DashboardView: View {
                         bluetooth.disconnect()
                     }
                     .buttonStyle(.bordered)
+
                 } else if bluetooth.isConnecting {
                     ProgressView("Conectando...")
+
                 } else if bluetooth.isScanning {
                     Button("Parar busca") {
                         bluetooth.stopScan()
                     }
                     .buttonStyle(.bordered)
+
                 } else {
                     Button("Procurar dispositivos") {
                         bluetooth.startScan()
@@ -104,9 +107,9 @@ struct DashboardView: View {
                             }
 
                             ForEach(
-                                Array(bluetooth.discoveredServices.enumerated()),
-                                id: \.offset
-                            ) { _, service in
+                                bluetooth.discoveredServices,
+                                id: \.self
+                            ) { service in
                                 Text(service)
                                     .font(.caption)
                                     .textSelection(.enabled)
@@ -120,12 +123,41 @@ struct DashboardView: View {
                             }
 
                             ForEach(
-                                Array(bluetooth.discoveredCharacteristics.enumerated()),
-                                id: \.offset
-                            ) { _, characteristic in
-                                Text(characteristic)
-                                    .font(.caption)
-                                    .textSelection(.enabled)
+                                bluetooth.discoveredCharacteristics
+                            ) { characteristic in
+
+                                VStack(alignment: .leading, spacing: 7) {
+                                    Text("UUID: \(characteristic.uuid)")
+                                        .font(.caption)
+                                        .textSelection(.enabled)
+
+                                    Text("Serviço: \(characteristic.serviceUUID)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+
+                                    Text("Propriedades: \(characteristic.propertiesDescription)")
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+
+                                    Text("Valor: \(characteristic.value)")
+                                        .font(.caption)
+                                        .textSelection(.enabled)
+
+                                    if characteristic.isReadable {
+                                        Button("Ler característica") {
+                                            bluetooth.readCharacteristic(
+                                                characteristic
+                                            )
+                                        }
+                                        .buttonStyle(.bordered)
+                                    } else {
+                                        Text("Leitura não disponível")
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding(.vertical, 5)
                             }
                         }
                     }
