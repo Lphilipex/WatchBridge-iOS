@@ -100,6 +100,7 @@ struct DashboardView: View {
                     }
 
                     if bluetooth.isConnected {
+
                         Section("Serviços GATT") {
                             if bluetooth.discoveredServices.isEmpty {
                                 Text("Aguardando serviços...")
@@ -127,6 +128,7 @@ struct DashboardView: View {
                             ) { characteristic in
 
                                 VStack(alignment: .leading, spacing: 7) {
+
                                     Text("UUID: \(characteristic.uuid)")
                                         .font(.caption)
                                         .textSelection(.enabled)
@@ -156,8 +158,39 @@ struct DashboardView: View {
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
                                     }
+
+                                    if characteristic.supportsNotifications {
+                                        Button(
+                                            characteristic.notificationsEnabled
+                                                ? "Desativar notificações"
+                                                : "Ativar notificações"
+                                        ) {
+                                            bluetooth.toggleNotifications(
+                                                characteristic
+                                            )
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                    }
                                 }
                                 .padding(.vertical, 5)
+                            }
+                        }
+
+                        Section("Eventos de notificações BLE") {
+                            if bluetooth.notificationEvents.isEmpty {
+                                Text("Nenhuma atualização recebida")
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            ForEach(
+                                Array(
+                                    bluetooth.notificationEvents.enumerated()
+                                ),
+                                id: \.offset
+                            ) { _, event in
+                                Text(event)
+                                    .font(.caption)
+                                    .textSelection(.enabled)
                             }
                         }
                     }

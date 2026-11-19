@@ -3,9 +3,11 @@ import Foundation
 import CoreBluetooth
 import Combine
 
+
 struct BluetoothCharacteristicInfo: Identifiable {
     let characteristic: CBCharacteristic
     var value: String = "Ainda não consultada"
+    var notificationsEnabled = false
 
     var id: String {
         "\(serviceUUID)-\(uuid)"
@@ -21,6 +23,11 @@ struct BluetoothCharacteristicInfo: Identifiable {
 
     var isReadable: Bool {
         characteristic.properties.contains(.read)
+    }
+
+    var supportsNotifications: Bool {
+        characteristic.properties.contains(.notify)
+            || characteristic.properties.contains(.indicate)
     }
 
     var propertiesDescription: String {
@@ -52,6 +59,7 @@ struct BluetoothCharacteristicInfo: Identifiable {
     }
 }
 
+
 final class BluetoothManager: NSObject,
     ObservableObject,
     CBCentralManagerDelegate,
@@ -62,6 +70,7 @@ final class BluetoothManager: NSObject,
     @Published var isConnecting = false
     @Published var isConnected = false
 
+    @Published var notificationEvents: [String] = []
     @Published var devices: [WatchDevice] = []
     @Published var discoveredServices: [String] = []
     @Published var discoveredCharacteristics: [BluetoothCharacteristicInfo] = []
@@ -328,6 +337,85 @@ final class BluetoothManager: NSObject,
         )
     }
 
+// MARK: - Notificações BLE
+
+func toggleNotifications(
+    _ info: BluetoothCharacteristicInfo
+) {
+    guard isConnected,
+          let peripheral = connectedPeripheral else {
+        status = "Nenhum dispositivo conectado"
+        return
+    }
+
+    guard info.supportsNotifications else {
+        status = "Característica não suporta notificações"
+        return
+    }
+
+    let enable = !info.notificationsEnabled
+
+    status = enable
+        ? "Ativando notificações..."
+        : "Desativando notificações..."
+
+    peripheral.setNotifyValue(
+        enable,
+        for: info.characteristic
+    )
+}
+
+// MARK: - Estado das notificações
+
+func peripheral(
+    _ peripheral: CBPeripheral,
+    didUpdateNotificationStateFor characteristic: CBCharacteristic,
+    error: Error?
+) {
+    let characteristicID = """
+    \(characteristic.service?.uuid.uuidString ?? "Desconhecido")-\(characteristic.uuid.uuidString)
+    """
+
+    guard let index = discoveredCharacteristics.firstIndex(
+        where: { $0.id == characteristicID }
+    ) else {
+        return
+    }
+
+    if let error = error {
+        status = "Erro ao configurar notificação"
+
+        notificationEvents.insert(
+            "Erro: \(error.localizedDescription)",
+            at: 0
+        )
+
+        return
+    }
+
+    discoveredCharacteristics[index].notificationsEnabled =
+        characteristic.isNotifying
+
+    if characteristic.isNotifying {
+        status = "Notificações ativadas"
+
+        notificationEvents.insert(
+            "Notificações ativadas: \(characteristic.uuid.uuidString)",
+            at: 0
+        )
+    } else {
+        status = "Notificações desativadas"
+
+        notificationEvents.insert(
+            "Notificações desativadas: \(characteristic.uuid.uuidString)",
+            at: 0
+        )
+    }
+}
+
+
+    
+
     func peripheral(
         _ peripheral: CBPeripheral,
         didUpdateValueFor characteristic: CBCharacteristic,
@@ -365,5 +453,15 @@ final class BluetoothManager: NSObject,
 
         discoveredCharacteristics[index].value = hexadecimal
         status = "Leitura concluída"
+        if characteristic.isNotifying {
+    notificationEvents.insert(
+        "Atualização recebida: \(characteristic.uuid.uuidString) = \(hexadecimal)",
+        at: 0
+    )
+
+    if notificationEvents.count > 50 {
+        notificationEvents.removeLast()
+    }
+}
     }
 }
