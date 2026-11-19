@@ -12,6 +12,8 @@ struct BluetoothCharacteristicInfo: Identifiable {
     var value: String = "Ainda não consultada"
     var notificationsEnabled = false
 
+    // MARK: - Identificação
+
     var id: String {
         "\(serviceUUID)-\(uuid)"
     }
@@ -24,8 +26,30 @@ struct BluetoothCharacteristicInfo: Identifiable {
         characteristic.uuid.uuidString
     }
 
+    var serviceName: String {
+        BluetoothUUIDCatalog.serviceName(for: serviceUUID)
+    }
+
+    var characteristicName: String {
+        BluetoothUUIDCatalog.characteristicName(for: uuid)
+    }
+
+    var uuidType: String {
+        BluetoothUUIDCatalog.uuidType(for: uuid)
+    }
+
+    // MARK: - Propriedades BLE
+
     var isReadable: Bool {
         characteristic.properties.contains(.read)
+    }
+
+    var isWritable: Bool {
+        characteristic.properties.contains(.write)
+    }
+
+    var supportsWriteWithoutResponse: Bool {
+        characteristic.properties.contains(.writeWithoutResponse)
     }
 
     var supportsNotifications: Bool {
@@ -33,32 +57,90 @@ struct BluetoothCharacteristicInfo: Identifiable {
             || characteristic.properties.contains(.indicate)
     }
 
+    var supportsNotify: Bool {
+        characteristic.properties.contains(.notify)
+    }
+
+    var supportsIndications: Bool {
+        characteristic.properties.contains(.indicate)
+    }
+
+    var supportsBroadcast: Bool {
+        characteristic.properties.contains(.broadcast)
+    }
+
+    var supportsExtendedProperties: Bool {
+        characteristic.properties.contains(.extendedProperties)
+    }
+
+    var supportsAuthenticatedSignedWrites: Bool {
+        characteristic.properties.contains(.authenticatedSignedWrites)
+    }
+
+    // MARK: - Descrição das propriedades
+
     var propertiesDescription: String {
+
         var properties: [String] = []
 
-        if characteristic.properties.contains(.read) {
-            properties.append("Leitura")
+        if isReadable {
+            properties.append("READ - Leitura")
         }
 
-        if characteristic.properties.contains(.write) {
-            properties.append("Escrita")
+        if isWritable {
+            properties.append("WRITE - Escrita")
         }
 
-        if characteristic.properties.contains(.writeWithoutResponse) {
-            properties.append("Escrita sem resposta")
+        if supportsWriteWithoutResponse {
+            properties.append("WRITE WITHOUT RESPONSE - Escrita sem resposta")
         }
 
-        if characteristic.properties.contains(.notify) {
-            properties.append("Notificações")
+        if supportsNotify {
+            properties.append("NOTIFY - Notificações")
         }
 
-        if characteristic.properties.contains(.indicate) {
-            properties.append("Indicações")
+        if supportsIndications {
+            properties.append("INDICATE - Indicações")
+        }
+
+        if supportsBroadcast {
+            properties.append("BROADCAST - Transmissão")
+        }
+
+        if supportsExtendedProperties {
+            properties.append("EXTENDED PROPERTIES - Propriedades estendidas")
+        }
+
+        if supportsAuthenticatedSignedWrites {
+            properties.append("AUTHENTICATED SIGNED WRITES - Escrita autenticada")
         }
 
         return properties.isEmpty
-            ? "Propriedades não identificadas"
-            : properties.joined(separator: ", ")
+            ? "Nenhuma propriedade identificada"
+            : properties.joined(separator: "\n")
+    }
+
+    // MARK: - Resumo das permissões
+
+    var permissionsSummary: String {
+
+        var permissions: [String] = []
+
+        if isReadable {
+            permissions.append("Pode ler")
+        }
+
+        if isWritable || supportsWriteWithoutResponse {
+            permissions.append("Pode escrever")
+        }
+
+        if supportsNotifications {
+            permissions.append("Pode receber atualizações")
+        }
+
+        return permissions.isEmpty
+            ? "Sem operações conhecidas"
+            : permissions.joined(separator: " | ")
     }
 }
 
@@ -583,7 +665,7 @@ final class BluetoothManager: NSObject,
 
         guard info.supportsNotifications else {
 
-            status = "Característica não suporta notificações"
+            status = "Característica não suporta notificações ou indicações"
             return
         }
 
