@@ -71,13 +71,43 @@ final class BluetoothManager: NSObject,
     @Published var isConnected = false
 
     @Published var notificationEvents: [String] = []
+    @Published var diagnosticEvents: [String] = []
+
     @Published var devices: [WatchDevice] = []
     @Published var discoveredServices: [String] = []
     @Published var discoveredCharacteristics: [BluetoothCharacteristicInfo] = []
 
     @Published var connectedDeviceName: String?
     @Published var status = "Aguardando Bluetooth"
+    
+    var diagnosticReport: String {
+        """
+        WATCHBRIDGE - RELATÓRIO DE DIAGNÓSTICO
 
+        Status: \(status)
+        Bluetooth: \(isBluetoothReady ? "Disponível" : "Indisponível")
+        Conexão: \(isConnected ? "Conectado" : "Desconectado")
+        Dispositivo: \(connectedDeviceName ?? "Nenhum")
+        Dispositivos encontrados: \(devices.count)
+        Serviços GATT: \(discoveredServices.count)
+        Características: \(discoveredCharacteristics.count)
+        Notificações: \(notificationEvents.count)
+
+        EVENTOS DE DIAGNÓSTICO:
+        \(diagnosticEvents.joined(separator: "\n"))
+
+        EVENTOS BLE:
+        \(notificationEvents.joined(separator: "\n"))
+        """
+    }
+    
+    private func registerDiagnosticEvent(_ message: String) {
+        diagnosticEvents.insert(message, at: 0)
+
+        if diagnosticEvents.count > 50 {
+            diagnosticEvents.removeLast()
+        }
+    }
     private var central: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
 

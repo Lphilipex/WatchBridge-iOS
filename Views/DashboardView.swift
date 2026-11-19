@@ -217,19 +217,14 @@ struct DashboardView: View {
                     // MARK: - Painel de diagnóstico
 
                     Section("Painel de diagnóstico") {
-
                         LabeledContent(
                             "Bluetooth",
-                            value: bluetooth.isBluetoothReady
-                                ? "Disponível"
-                                : "Indisponível"
+                            value: bluetooth.isBluetoothReady ? "Disponível" : "Indisponível"
                         )
 
                         LabeledContent(
                             "Conexão",
-                            value: bluetooth.isConnected
-                                ? "Conectado"
-                                : "Desconectado"
+                            value: bluetooth.isConnected ? "Conectado" : "Desconectado"
                         )
 
                         LabeledContent(
@@ -258,17 +253,16 @@ struct DashboardView: View {
                         )
 
                         ShareLink(
-                            item: bluetooth.diagnosticReport,
-                            subject: Text("Relatório WatchBridge"),
-                            preview: SharePreview(
-                                "Diagnóstico WatchBridge"
-                            )
+                            item: bluetooth.diagnosticReport
                         ) {
                             Label(
                                 "Exportar relatório de diagnóstico",
                                 systemImage: "square.and.arrow.up"
                             )
                         }
+
+                    } header: {
+                        Text("Painel de diagnóstico")
                     }
 
                     // MARK: - Histórico de diagnóstico
