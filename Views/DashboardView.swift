@@ -6,10 +6,10 @@ struct DashboardView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
+            VStack(spacing: 15) {
 
                 Image(systemName: "applewatch")
-                    .font(.system(size: 65))
+                    .font(.system(size: 55))
                     .foregroundStyle(.blue)
 
                 Text("WatchBridge")
@@ -19,15 +19,30 @@ struct DashboardView: View {
                     .font(.headline)
 
                 Text(bluetooth.status)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
-                if bluetooth.isScanning {
+                if bluetooth.isConnected {
+                    Label(
+                        "Conectado: \(bluetooth.connectedDeviceName ?? "Dispositivo")",
+                        systemImage: "checkmark.circle.fill"
+                    )
+                    .foregroundStyle(.green)
+
+                    Button("Desconectar") {
+                        bluetooth.disconnect()
+                    }
+                    .buttonStyle(.bordered)
+                } else if bluetooth.isConnecting {
+                    ProgressView("Conectando...")
+                } else if bluetooth.isScanning {
                     Button("Parar busca") {
                         bluetooth.stopScan()
                     }
                     .buttonStyle(.bordered)
                 } else {
-                    Button("Procurar relógio") {
+                    Button("Procurar dispositivos") {
                         bluetooth.startScan()
                     }
                     .buttonStyle(.borderedProminent)
@@ -36,49 +51,84 @@ struct DashboardView: View {
 
                 Divider()
 
-                HStack {
-                    Text("Dispositivos encontrados")
-                        .font(.headline)
+                List {
+                    Section("Dispositivos encontrados") {
+                        if bluetooth.devices.isEmpty {
+                            Text("Nenhum dispositivo encontrado")
+                                .foregroundStyle(.secondary)
+                        }
 
-                    Spacer()
+                        ForEach(bluetooth.devices) { device in
+                            Button {
+                                bluetooth.connect(to: device)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    HStack {
+                                        Text(device.name)
+                                            .font(.headline)
 
-                    Text("\(bluetooth.devices.count)")
-                        .foregroundStyle(.secondary)
-                }
+                                        Spacer()
 
-                List(bluetooth.devices) { device in
-                    VStack(alignment: .leading, spacing: 6) {
+                                        if device.isLikelyGalaxyWatch {
+                                            Text("Samsung?")
+                                                .font(.caption)
+                                                .foregroundStyle(.green)
+                                        }
+                                    }
 
-                        HStack {
-                            Text(device.name)
-                                .font(.headline)
+                                    Text(device.id.uuidString)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
 
-                            Spacer()
+                                    Text("Sinal: \(device.rssi) dBm")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
 
-                            if device.isLikelyGalaxyWatch {
-                                Text("Possível Galaxy Watch")
-                                    .font(.caption2)
-                                    .foregroundStyle(.green)
+                                    Text("Toque para conectar")
+                                        .font(.caption)
+                                        .foregroundStyle(.blue)
+                                }
+                            }
+                            .disabled(
+                                bluetooth.isConnected ||
+                                bluetooth.isConnecting
+                            )
+                        }
+                    }
+
+                    if bluetooth.isConnected {
+                        Section("Serviços GATT") {
+                            if bluetooth.discoveredServices.isEmpty {
+                                Text("Aguardando serviços...")
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            ForEach(
+                                Array(bluetooth.discoveredServices.enumerated()),
+                                id: \.offset
+                            ) { _, service in
+                                Text(service)
+                                    .font(.caption)
+                                    .textSelection(.enabled)
                             }
                         }
 
-                        Text(device.id.uuidString)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        Section("Características Bluetooth") {
+                            if bluetooth.discoveredCharacteristics.isEmpty {
+                                Text("Aguardando características...")
+                                    .foregroundStyle(.secondary)
+                            }
 
-                        Text("Sinal Bluetooth: \(device.rssi) dBm")
-                            .font(.caption)
-
-                        if device.isLikelyGalaxyWatch {
-                            Label(
-                                "Possível dispositivo Samsung",
-                                systemImage: "applewatch"
-                            )
-                            .font(.caption)
-                            .foregroundStyle(.green)
+                            ForEach(
+                                Array(bluetooth.discoveredCharacteristics.enumerated()),
+                                id: \.offset
+                            ) { _, characteristic in
+                                Text(characteristic)
+                                    .font(.caption)
+                                    .textSelection(.enabled)
+                            }
                         }
                     }
-                    .padding(.vertical, 4)
                 }
             }
             .padding()
