@@ -735,7 +735,8 @@ final class BluetoothManager: NSObject,
         registerDiagnosticEvent(message)
     }
 
-    // MARK: - Atualização de valores
+  
+    // MARK: - Atualização e interpretação de valores
 
     func peripheral(
         _ peripheral: CBPeripheral,
@@ -777,23 +778,39 @@ final class BluetoothManager: NSObject,
             return
         }
 
+        // Dados originais em hexadecimal
+
         let hexadecimal = data.map {
             String(format: "%02X", $0)
-        }.joined(separator: " ")
+        }
+        .joined(separator: " ")
 
-        discoveredCharacteristics[index].value = hexadecimal
+        // Interpretação dos dados Bluetooth
+
+        let interpretedValue = BluetoothValueDecoder.decode(
+            characteristicUUID: characteristic.uuid.uuidString,
+            data: data
+        )
+
+        discoveredCharacteristics[index].value = interpretedValue
 
         status = "Leitura concluída"
 
         registerDiagnosticEvent(
-            "Valor recebido da característica \(characteristic.uuid.uuidString): \(hexadecimal)"
+            """
+            Característica: \(characteristic.uuid.uuidString)
+            Valor interpretado: \(interpretedValue)
+            Dados originais: \(hexadecimal)
+            """
         )
 
         if characteristic.isNotifying {
 
             registerNotificationEvent(
-                "Atualização recebida: \(characteristic.uuid.uuidString) = \(hexadecimal)"
+                """
+                Atualização recebida:
+                \(characteristic.uuid.uuidString) = \(interpretedValue)
+                """
             )
         }
     }
-}
