@@ -216,7 +216,7 @@ struct DashboardView: View {
 
                     // MARK: - Painel de diagnóstico
 
-                    Section("Painel de diagnóstico") {
+                    Section {
                         LabeledContent(
                             "Bluetooth",
                             value: bluetooth.isBluetoothReady ? "Disponível" : "Indisponível"
