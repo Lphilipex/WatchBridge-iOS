@@ -111,9 +111,20 @@ struct DashboardView: View {
                                 bluetooth.discoveredServices,
                                 id: \.self
                             ) { service in
-                                Text(service)
-                                    .font(.caption)
-                                    .textSelection(.enabled)
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(service)
+                                        .font(.caption)
+                                        .textSelection(.enabled)
+
+                                    Text(
+                                        BluetoothUUIDCatalog.serviceName(
+                                            for: service
+                                        )
+                                    )
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                }
                             }
                         }
 
@@ -132,6 +143,14 @@ struct DashboardView: View {
                                     Text("UUID: \(characteristic.uuid)")
                                         .font(.caption)
                                         .textSelection(.enabled)
+
+                                    Text(
+                                        BluetoothUUIDCatalog.characteristicName(
+                                            for: characteristic.uuid
+                                        )
+                                    )
+                                    .font(.caption)
+                                    .foregroundStyle(.blue)
 
                                     Text("Serviço: \(characteristic.serviceUUID)")
                                         .font(.caption2)
