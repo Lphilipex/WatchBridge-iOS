@@ -2,11 +2,14 @@
 import SwiftUI
 
 struct DashboardView: View {
+
     @StateObject private var bluetooth = BluetoothManager()
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 15) {
+
+                // MARK: - Cabeçalho
 
                 Image(systemName: "applewatch")
                     .font(.system(size: 55))
@@ -23,7 +26,10 @@ struct DashboardView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
+                // MARK: - Controles Bluetooth
+
                 if bluetooth.isConnected {
+
                     Label(
                         "Conectado: \(bluetooth.connectedDeviceName ?? "Dispositivo")",
                         systemImage: "checkmark.circle.fill"
@@ -36,15 +42,18 @@ struct DashboardView: View {
                     .buttonStyle(.bordered)
 
                 } else if bluetooth.isConnecting {
+
                     ProgressView("Conectando...")
 
                 } else if bluetooth.isScanning {
+
                     Button("Parar busca") {
                         bluetooth.stopScan()
                     }
                     .buttonStyle(.bordered)
 
                 } else {
+
                     Button("Procurar dispositivos") {
                         bluetooth.startScan()
                     }
@@ -54,162 +63,383 @@ struct DashboardView: View {
 
                 Divider()
 
+                // MARK: - Lista principal
+
                 List {
+
+                    // MARK: Dispositivos encontrados
+
                     Section("Dispositivos encontrados") {
+
                         if bluetooth.devices.isEmpty {
+
                             Text("Nenhum dispositivo encontrado")
                                 .foregroundStyle(.secondary)
-                        }
 
-                        ForEach(bluetooth.devices) { device in
-                            Button {
-                                bluetooth.connect(to: device)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack {
-                                        Text(device.name)
-                                            .font(.headline)
+                        } else {
 
-                                        Spacer()
+                            ForEach(bluetooth.devices) { device in
 
-                                        if device.isLikelyGalaxyWatch {
-                                            Text("Samsung?")
+                                Button {
+                                    bluetooth.connect(to: device)
+                                } label: {
+
+                                    VStack(alignment: .leading, spacing: 7) {
+
+                                        HStack {
+
+                                            Text(device.name)
+                                                .font(.headline)
+                                                .foregroundStyle(.primary)
+
+                                            Spacer()
+
+                                            if device.isLikelyGalaxyWatch {
+
+                                                Label(
+                                                    "Samsung?",
+                                                    systemImage: "applewatch"
+                                                )
                                                 .font(.caption)
                                                 .foregroundStyle(.green)
+                                            }
                                         }
+
+                                        Text(device.id.uuidString)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+
+                                        HStack {
+
+                                            Label(
+                                                "\(device.rssi) dBm",
+                                                systemImage: "wifi"
+                                            )
+
+                                            Spacer()
+
+                                            Text("Toque para conectar")
+                                                .foregroundStyle(.blue)
+                                        }
+                                        .font(.caption)
                                     }
-
-                                    Text(device.id.uuidString)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-
-                                    Text("Sinal: \(device.rssi) dBm")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-
-                                    Text("Toque para conectar")
-                                        .font(.caption)
-                                        .foregroundStyle(.blue)
+                                    .padding(.vertical, 4)
                                 }
+                                .disabled(
+                                    bluetooth.isConnected ||
+                                    bluetooth.isConnecting
+                                )
                             }
-                            .disabled(
-                                bluetooth.isConnected ||
-                                bluetooth.isConnecting
-                            )
                         }
                     }
 
+                    // MARK: - Serviços GATT
+
                     if bluetooth.isConnected {
 
-                        Section("Serviços GATT") {
+                        Section {
+
                             if bluetooth.discoveredServices.isEmpty {
+
                                 Text("Aguardando serviços...")
                                     .foregroundStyle(.secondary)
+
+                            } else {
+
+                                ForEach(
+                                    bluetooth.discoveredServices,
+                                    id: \.self
+                                ) { service in
+
+                                    VStack(
+                                        alignment: .leading,
+                                        spacing: 6
+                                    ) {
+
+                                        Label(
+                                            BluetoothUUIDCatalog.serviceName(
+                                                for: service
+                                            ),
+                                            systemImage: "server.rack"
+                                        )
+                                        .font(.headline)
+
+                                        Text("UUID: \(service)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                    }
+                                    .padding(.vertical, 4)
+                                }
                             }
 
-                            ForEach(
-                                bluetooth.discoveredServices,
-                                id: \.self
-                            ) { service in
+                        } header: {
 
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(service)
-                                        .font(.caption)
-                                        .textSelection(.enabled)
+                            HStack {
+                                Text("Serviços GATT")
 
-                                    Text(
-                                        BluetoothUUIDCatalog.serviceName(
-                                            for: service
-                                        )
-                                    )
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                }
+                                Spacer()
+
+                                Text(
+                                    "\(bluetooth.discoveredServices.count)"
+                                )
+                                .foregroundStyle(.secondary)
                             }
                         }
 
-                        Section("Características Bluetooth") {
+                        // MARK: - Características Bluetooth
+
+                        Section {
+
                             if bluetooth.discoveredCharacteristics.isEmpty {
+
                                 Text("Aguardando características...")
                                     .foregroundStyle(.secondary)
-                            }
 
-                            ForEach(
-                                bluetooth.discoveredCharacteristics
-                            ) { characteristic in
+                            } else {
 
-                                VStack(alignment: .leading, spacing: 7) {
+                                ForEach(
+                                    bluetooth.discoveredCharacteristics
+                                ) { characteristic in
 
-                                    Text("UUID: \(characteristic.uuid)")
-                                        .font(.caption)
-                                        .textSelection(.enabled)
+                                    VStack(
+                                        alignment: .leading,
+                                        spacing: 10
+                                    ) {
 
-                                    Text(
-                                        BluetoothUUIDCatalog.characteristicName(
-                                            for: characteristic.uuid
-                                        )
-                                    )
-                                    .font(.caption)
-                                    .foregroundStyle(.blue)
+                                        // Identificação
 
-                                    Text("Serviço: \(characteristic.serviceUUID)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                        .textSelection(.enabled)
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 4
+                                        ) {
 
-                                    Text("Propriedades: \(characteristic.propertiesDescription)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-
-                                    Text("Valor: \(characteristic.value)")
-                                        .font(.caption)
-                                        .textSelection(.enabled)
-
-                                    if characteristic.isReadable {
-                                        Button("Ler característica") {
-                                            bluetooth.readCharacteristic(
-                                                characteristic
+                                            Text(
+                                                characteristic.characteristicName
                                             )
-                                        }
-                                        .buttonStyle(.bordered)
-                                    } else {
-                                        Text("Leitura não disponível")
+                                            .font(.headline)
+                                            .foregroundStyle(.blue)
+
+                                            Text(
+                                                "UUID: \(characteristic.uuid)"
+                                            )
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
-                                    }
+                                            .textSelection(.enabled)
 
-                                    if characteristic.supportsNotifications {
-                                        Button(
-                                            characteristic.notificationsEnabled
-                                                ? "Desativar notificações"
-                                                : "Ativar notificações"
-                                        ) {
-                                            bluetooth.toggleNotifications(
-                                                characteristic
+                                            Text(
+                                                "Tipo: \(characteristic.uuidType)"
                                             )
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
                                         }
-                                        .buttonStyle(.borderedProminent)
+
+                                        Divider()
+
+                                        // Serviço relacionado
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 4
+                                        ) {
+
+                                            Text("Serviço relacionado")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                characteristic.serviceName
+                                            )
+                                            .font(.subheadline)
+
+                                            Text(
+                                                characteristic.serviceUUID
+                                            )
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .textSelection(.enabled)
+                                        }
+
+                                        // Propriedades Bluetooth
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 5
+                                        ) {
+
+                                            Text("Propriedades Bluetooth")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                characteristic.propertiesDescription
+                                            )
+                                            .font(.caption)
+                                            .textSelection(.enabled)
+
+                                            Text(
+                                                characteristic.permissionsSummary
+                                            )
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                        }
+
+                                        // Capacidades
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 5
+                                        ) {
+
+                                            Text("Capacidades")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            HStack(spacing: 6) {
+
+                                                capabilityLabel(
+                                                    "Leitura",
+                                                    enabled: characteristic.isReadable
+                                                )
+
+                                                capabilityLabel(
+                                                    "Escrita",
+                                                    enabled: characteristic.isWritable
+                                                )
+                                            }
+
+                                            HStack(spacing: 6) {
+
+                                                capabilityLabel(
+                                                    "Notify",
+                                                    enabled: characteristic.supportsNotify
+                                                )
+
+                                                capabilityLabel(
+                                                    "Indicate",
+                                                    enabled: characteristic.supportsIndications
+                                                )
+                                            }
+                                        }
+
+                                        Divider()
+
+                                        // Valor recebido
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 5
+                                        ) {
+
+                                            Label(
+                                                "Valor da característica",
+                                                systemImage: "waveform.path"
+                                            )
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+
+                                            Text(characteristic.value)
+                                                .font(.subheadline)
+                                                .textSelection(.enabled)
+                                        }
+
+                                        // Ações
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 8
+                                        ) {
+
+                                            if characteristic.isReadable {
+
+                                                Button {
+                                                    bluetooth.readCharacteristic(
+                                                        characteristic
+                                                    )
+                                                } label: {
+
+                                                    Label(
+                                                        "Ler característica",
+                                                        systemImage: "arrow.clockwise"
+                                                    )
+                                                }
+                                                .buttonStyle(.bordered)
+
+                                            } else {
+
+                                                Label(
+                                                    "Leitura não disponível",
+                                                    systemImage: "xmark.circle"
+                                                )
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            }
+
+                                            if characteristic.supportsNotifications {
+
+                                                Button {
+
+                                                    bluetooth.toggleNotifications(
+                                                        characteristic
+                                                    )
+
+                                                } label: {
+
+                                                    Label(
+                                                        characteristic.notificationsEnabled
+                                                            ? "Desativar atualizações"
+                                                            : "Ativar atualizações",
+                                                        systemImage: characteristic.notificationsEnabled
+                                                            ? "bell.slash"
+                                                            : "bell.badge"
+                                                    )
+                                                }
+                                                .buttonStyle(.borderedProminent)
+
+                                            }
+                                        }
                                     }
+                                    .padding(.vertical, 8)
                                 }
-                                .padding(.vertical, 5)
+                            }
+
+                        } header: {
+
+                            HStack {
+                                Text("Características Bluetooth")
+
+                                Spacer()
+
+                                Text(
+                                    "\(bluetooth.discoveredCharacteristics.count)"
+                                )
+                                .foregroundStyle(.secondary)
                             }
                         }
 
+                        // MARK: - Eventos de notificações BLE
+
                         Section("Eventos de notificações BLE") {
+
                             if bluetooth.notificationEvents.isEmpty {
+
                                 Text("Nenhuma atualização recebida")
                                     .foregroundStyle(.secondary)
-                            }
 
-                            ForEach(
-                                Array(
-                                    bluetooth.notificationEvents.enumerated()
-                                ),
-                                id: \.offset
-                            ) { _, event in
-                                Text(event)
-                                    .font(.caption)
-                                    .textSelection(.enabled)
+                            } else {
+
+                                ForEach(
+                                    Array(
+                                        bluetooth.notificationEvents.enumerated()
+                                    ),
+                                    id: \.offset
+                                ) { _, event in
+
+                                    Text(event)
+                                        .font(.caption)
+                                        .textSelection(.enabled)
+                                }
                             }
                         }
                     }
@@ -217,14 +447,19 @@ struct DashboardView: View {
                     // MARK: - Painel de diagnóstico
 
                     Section {
+
                         LabeledContent(
                             "Bluetooth",
-                            value: bluetooth.isBluetoothReady ? "Disponível" : "Indisponível"
+                            value: bluetooth.isBluetoothReady
+                                ? "Disponível"
+                                : "Indisponível"
                         )
 
                         LabeledContent(
-                            "Conexão",
-                            value: bluetooth.isConnected ? "Conectado" : "Desconectado"
+                            "Estado da conexão",
+                            value: bluetooth.isConnected
+                                ? "Conectado"
+                                : "Desconectado"
                         )
 
                         LabeledContent(
@@ -243,18 +478,19 @@ struct DashboardView: View {
                         )
 
                         LabeledContent(
-                            "Notificações",
+                            "Eventos de notificações",
                             value: "\(bluetooth.notificationEvents.count)"
                         )
 
                         LabeledContent(
-                            "Eventos registrados",
+                            "Eventos de diagnóstico",
                             value: "\(bluetooth.diagnosticEvents.count)"
                         )
 
                         ShareLink(
                             item: bluetooth.diagnosticReport
                         ) {
+
                             Label(
                                 "Exportar relatório de diagnóstico",
                                 systemImage: "square.and.arrow.up"
@@ -262,6 +498,7 @@ struct DashboardView: View {
                         }
 
                     } header: {
+
                         Text("Painel de diagnóstico")
                     }
 
@@ -270,15 +507,19 @@ struct DashboardView: View {
                     Section("Histórico de diagnóstico") {
 
                         if bluetooth.diagnosticEvents.isEmpty {
+
                             Text("Nenhum evento registrado.")
                                 .foregroundStyle(.secondary)
+
                         } else {
+
                             ForEach(
                                 Array(
                                     bluetooth.diagnosticEvents.prefix(10).enumerated()
                                 ),
                                 id: \.offset
                             ) { _, event in
+
                                 Text(event)
                                     .font(.caption)
                                     .textSelection(.enabled)
@@ -291,5 +532,32 @@ struct DashboardView: View {
             .navigationTitle("WatchBridge")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    // MARK: - Indicador de capacidade
+
+    private func capabilityLabel(
+        _ title: String,
+        enabled: Bool
+    ) -> some View {
+
+        Label(
+            title,
+            systemImage: enabled
+                ? "checkmark.circle.fill"
+                : "xmark.circle"
+        )
+        .font(.caption2)
+        .foregroundStyle(
+            enabled ? .green : .secondary
+        )
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            enabled
+                ? Color.green.opacity(0.10)
+                : Color.gray.opacity(0.10)
+        )
+        .clipShape(Capsule())
     }
 }
