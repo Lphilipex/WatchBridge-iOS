@@ -1,13 +1,11 @@
+
 import SwiftUI
 
 struct DashboardView: View {
-
     @StateObject private var bluetooth = BluetoothManager()
 
     var body: some View {
-
         NavigationStack {
-
             VStack(spacing: 20) {
 
                 Image(systemName: "applewatch")
@@ -24,14 +22,11 @@ struct DashboardView: View {
                     .foregroundStyle(.secondary)
 
                 if bluetooth.isScanning {
-
                     Button("Parar busca") {
                         bluetooth.stopScan()
                     }
                     .buttonStyle(.bordered)
-
                 } else {
-
                     Button("Procurar relógio") {
                         bluetooth.startScan()
                     }
@@ -52,11 +47,20 @@ struct DashboardView: View {
                 }
 
                 List(bluetooth.devices) { device in
+                    VStack(alignment: .leading, spacing: 6) {
 
-                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            Text(device.name)
+                                .font(.headline)
 
-                        Text(device.name)
-                            .font(.headline)
+                            Spacer()
+
+                            if device.isLikelyGalaxyWatch {
+                                Text("Possível Galaxy Watch")
+                                    .font(.caption2)
+                                    .foregroundStyle(.green)
+                            }
+                        }
 
                         Text(device.id.uuidString)
                             .font(.caption)
@@ -64,6 +68,15 @@ struct DashboardView: View {
 
                         Text("Sinal Bluetooth: \(device.rssi) dBm")
                             .font(.caption)
+
+                        if device.isLikelyGalaxyWatch {
+                            Label(
+                                "Possível dispositivo Samsung",
+                                systemImage: "applewatch"
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.green)
+                        }
                     }
                     .padding(.vertical, 4)
                 }
