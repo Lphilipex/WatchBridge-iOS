@@ -176,6 +176,7 @@ final class BluetoothManager: NSObject,
     // MARK: - Objetos Bluetooth
 
     private var central: CBCentralManager!
+
     private var connectedPeripheral: CBPeripheral?
 
     // MARK: - Resumo dos serviços GATT
@@ -275,9 +276,9 @@ final class BluetoothManager: NSObject,
         Notificações: \(notificationEvents.count)
 
 
-            RESUMO DOS SERVIÇOS GATT:
+        RESUMO DOS SERVIÇOS GATT:
 
-               \(gattServicesSummary)
+        \(gattServicesSummary)
 
 
         RESUMO DAS CARACTERÍSTICAS GATT:
@@ -455,10 +456,39 @@ final class BluetoothManager: NSObject,
         rssi RSSI: NSNumber
     ) {
 
+        // Nome anunciado pelo dispositivo
+
+        let advertisedName =
+            advertisementData[CBAdvertisementDataLocalNameKey] as? String
+
+        // Serviços anunciados
+
+        let advertisedServices = (
+            advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []
+        ).map {
+            $0.uuidString
+        }
+
+        // Dados do fabricante
+
+        let manufacturerData =
+            advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
+
+        let manufacturerHex = manufacturerData?.map {
+            String(format: "%02X", $0)
+        }.joined(separator: " ")
+
+        // Criação do dispositivo
+
         let device = WatchDevice(
             peripheral: peripheral,
-            rssi: RSSI.intValue
+            rssi: RSSI.intValue,
+            advertisedName: advertisedName,
+            advertisedServices: advertisedServices,
+            manufacturerData: manufacturerHex
         )
+
+        // Atualização ou inclusão na lista
 
         if let index = devices.firstIndex(
             where: { $0.id == device.id }
@@ -470,8 +500,19 @@ final class BluetoothManager: NSObject,
 
             devices.append(device)
 
+            let servicesDescription = advertisedServices.isEmpty
+                ? "Nenhum serviço anunciado"
+                : advertisedServices.joined(separator: ", ")
+
             registerDiagnosticEvent(
-                "Dispositivo encontrado: \(device.name) | RSSI: \(device.rssi) dBm"
+                """
+                Dispositivo encontrado: \(device.name)
+                Nome anunciado: \(advertisedName ?? "Não informado")
+                RSSI: \(device.rssi) dBm
+                Serviços anunciados: \(servicesDescription)
+                Fabricante: \(manufacturerHex ?? "Não informado")
+                Identificador: \(device.id.uuidString)
+                """
             )
         }
     }
@@ -712,7 +753,6 @@ final class BluetoothManager: NSObject,
         )
     }
 
-
     // MARK: - Descoberta de características
 
     func peripheral(
@@ -740,13 +780,14 @@ final class BluetoothManager: NSObject,
         }
 
         // Características padrão que serão lidas automaticamente.
+
         let automaticReadUUIDs: Set<String> = [
-            "2A29", // Fabricante
-            "2A24", // Modelo
-            "2A26", // Firmware
-            "2A27", // Hardware
-            "2A28", // Software
-            "2A19"  // Bateria
+            "2A29",
+            "2A24",
+            "2A26",
+            "2A27",
+            "2A28",
+            "2A19"
         ]
 
         registerDiagnosticEvent(
@@ -771,7 +812,6 @@ final class BluetoothManager: NSObject,
                 discoveredCharacteristics.append(info)
             }
 
-            // Registro detalhado da característica.
             registerDiagnosticEvent(
                 """
                 Característica encontrada:
@@ -783,7 +823,6 @@ final class BluetoothManager: NSObject,
                 """
             )
 
-            // Compara UUIDs usando CBUUID.
             let shouldReadAutomatically = automaticReadUUIDs.contains {
                 characteristic.uuid == CBUUID(string: $0)
             }
@@ -889,7 +928,7 @@ final class BluetoothManager: NSObject,
             status = "Nenhum dispositivo conectado"
             return
         }
-        // Verifica se a característica pertence à conexão atual.
+
         guard let service = info.characteristic.service,
               service.peripheral === peripheral,
               discoveredCharacteristics.contains(
@@ -1015,7 +1054,6 @@ final class BluetoothManager: NSObject,
         )
     }
 
-
     // MARK: - Estado das notificações
 
     func peripheral(
@@ -1108,14 +1146,10 @@ final class BluetoothManager: NSObject,
             return
         }
 
-        // Dados originais em hexadecimal
-
         let hexadecimal = data.map {
             String(format: "%02X", $0)
         }
         .joined(separator: " ")
-
-        // Interpretação dos dados Bluetooth
 
         let interpretedValue = BluetoothValueDecoder.decode(
             characteristicUUID: characteristic.uuid.uuidString,
