@@ -674,16 +674,9 @@ final class BluetoothManager: NSObject,
         status = "Características Bluetooth identificadas"
 
         registerDiagnosticEvent(
-            "\(characteristics.count) característica(s) processadas no serviço \(service.uuid.uuidString)"
-        )
-    }
-
-
-        status = "Características Bluetooth identificadas"
-
-        registerDiagnosticEvent(
-            "\(characteristics.count) característica(s) encontradas no serviço \(service.uuid.uuidString)"
-        )
+        "\(characteristics.count) característica(s) processadas no serviço \(service.uuid.uuidString)"
+        )  
+        
     }
 
 
