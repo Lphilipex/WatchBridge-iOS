@@ -814,3 +814,4 @@ final class BluetoothManager: NSObject,
             )
         }
     }
+}
