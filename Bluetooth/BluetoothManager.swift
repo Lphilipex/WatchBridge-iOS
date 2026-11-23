@@ -578,6 +578,7 @@ final class BluetoothManager: NSObject,
         }
     }
 
+    
     // MARK: - Descoberta de características
 
     func peripheral(
@@ -599,6 +600,16 @@ final class BluetoothManager: NSObject,
             return
         }
 
+        // Características padrão que serão lidas automaticamente.
+        let automaticReadUUIDs: Set<String> = [
+            "2A29", // Fabricante
+            "2A24", // Modelo
+            "2A26", // Firmware
+            "2A27", // Hardware
+            "2A28", // Software
+            "2A19"  // Bateria
+        ]
+
         for characteristic in characteristics {
 
             let info = BluetoothCharacteristicInfo(
@@ -610,6 +621,18 @@ final class BluetoothManager: NSObject,
             ) {
 
                 discoveredCharacteristics.append(info)
+
+                let uuid = characteristic.uuid.uuidString.uppercased()
+
+                // Leitura automática somente das características selecionadas.
+                if info.isReadable && automaticReadUUIDs.contains(uuid) {
+
+                    peripheral.readValue(for: characteristic)
+
+                    registerDiagnosticEvent(
+                        "Leitura automática solicitada: \(uuid)"
+                    )
+                }
             }
         }
 
@@ -619,6 +642,7 @@ final class BluetoothManager: NSObject,
             "\(characteristics.count) característica(s) encontradas no serviço \(service.uuid.uuidString)"
         )
     }
+
 
     // MARK: - Leitura de características
 
