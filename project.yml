@@ -19,7 +19,7 @@ targets:
       - path: App
       - path: Models
       - path: Bluetooth
-      
+      - path: Services
       - path: Views
 
     settings:
