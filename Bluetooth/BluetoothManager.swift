@@ -889,6 +889,24 @@ final class BluetoothManager: NSObject,
             status = "Nenhum dispositivo conectado"
             return
         }
+        // Verifica se a característica pertence à conexão atual.
+        guard let service = info.characteristic.service,
+              service.peripheral === peripheral,
+              discoveredCharacteristics.contains(
+                  where: {
+                      $0.id == info.id
+                          && $0.characteristic === info.characteristic
+                  }
+              ) else {
+
+            status = "Característica não pertence à conexão atual"
+
+            registerDiagnosticEvent(
+                "Escrita bloqueada: característica inválida ou desatualizada"
+            )
+
+            return
+        }
 
         let normalizedValue = hexadecimalValue
             .replacingOccurrences(
