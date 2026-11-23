@@ -168,6 +168,53 @@ enum BluetoothUUIDCatalog {
         "2AA0": "Height - Altura"
     ]
 
+
+    // MARK: - Classificação de serviços GATT
+
+    static func serviceCategory(for uuid: String) -> String {
+
+        let normalized = normalize(uuid)
+
+        switch normalized {
+
+        case "1800", "1801":
+            return "Serviços básicos GATT"
+
+        case "180A":
+            return "Informações do dispositivo"
+
+        case "1808", "1809", "1810", "181B",
+             "181C", "181D", "181F", "1822":
+            return "Saúde e sensores corporais"
+
+        case "180D", "1814", "1816", "1818",
+             "1819", "1826":
+            return "Atividade física"
+
+        case "1802", "1803", "180E", "1811", "1812":
+            return "Alertas e interação"
+
+        case "181A":
+            return "Sensoriamento ambiental"
+
+        case "1804", "1805", "1806", "1807",
+             "180B", "1813", "1815", "181E",
+             "1820", "1821", "1823", "1824",
+             "1825", "1827", "1828", "1829":
+            return "Conectividade e recursos do dispositivo"
+
+        default:
+
+            if services[normalized] != nil {
+                return "Outro serviço padrão"
+            }
+
+            return "Serviço não catalogado"
+        }
+    }
+
+
+
     // MARK: - Identificação de serviços
 
     static func serviceName(for uuid: String) -> String {

@@ -571,11 +571,29 @@ final class BluetoothManager: NSObject,
 
         for service in services {
 
+            let uuid = service.uuid.uuidString
+
+            let serviceName =
+                BluetoothUUIDCatalog.serviceName(for: uuid)
+
+            let serviceCategory =
+                BluetoothUUIDCatalog.serviceCategory(for: uuid)
+
+            registerDiagnosticEvent(
+                """
+                Serviço GATT identificado:
+                Nome: \(serviceName)
+                UUID: \(uuid)
+                Categoria: \(serviceCategory)
+                """
+            )
+
             peripheral.discoverCharacteristics(
                 nil,
                 for: service
             )
         }
+
     }
 
     
