@@ -5,6 +5,8 @@ struct DashboardView: View {
 
     @StateObject private var bluetooth = BluetoothManager()
 
+    @State private var writeValues: [String: String] = [:]
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 15) {
@@ -248,17 +250,13 @@ struct DashboardView: View {
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
 
-                                            Text(
-                                                characteristic.serviceName
-                                            )
-                                            .font(.subheadline)
+                                            Text(characteristic.serviceName)
+                                                .font(.subheadline)
 
-                                            Text(
-                                                characteristic.serviceUUID
-                                            )
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
+                                            Text(characteristic.serviceUUID)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .textSelection(.enabled)
                                         }
 
                                         // Propriedades Bluetooth
@@ -305,7 +303,8 @@ struct DashboardView: View {
 
                                                 capabilityLabel(
                                                     "Escrita",
-                                                    enabled: characteristic.isWritable
+                                                    enabled: characteristic.isWritable ||
+                                                        characteristic.supportsWriteWithoutResponse
                                                 )
                                             }
 
@@ -344,12 +343,14 @@ struct DashboardView: View {
                                                 .textSelection(.enabled)
                                         }
 
-                                        // Ações
+                                        // MARK: - Ações
 
                                         VStack(
                                             alignment: .leading,
                                             spacing: 8
                                         ) {
+
+                                            // Leitura
 
                                             if characteristic.isReadable {
 
@@ -376,6 +377,8 @@ struct DashboardView: View {
                                                 .foregroundStyle(.secondary)
                                             }
 
+                                            // Notificações
+
                                             if characteristic.supportsNotifications {
 
                                                 Button {
@@ -396,7 +399,53 @@ struct DashboardView: View {
                                                     )
                                                 }
                                                 .buttonStyle(.borderedProminent)
+                                            }
 
+                                            // Escrita hexadecimal
+
+                                            if characteristic.isWritable ||
+                                                characteristic.supportsWriteWithoutResponse {
+
+                                                VStack(
+                                                    alignment: .leading,
+                                                    spacing: 8
+                                                ) {
+
+                                                    Text("Enviar dados (HEX)")
+                                                        .font(.subheadline.bold())
+
+                                                    TextField(
+                                                        "Ex.: 01 02 FF",
+                                                        text: Binding(
+                                                            get: {
+                                                                writeValues[characteristic.id] ?? ""
+                                                            },
+                                                            set: {
+                                                                writeValues[characteristic.id] = $0
+                                                            }
+                                                        )
+                                                    )
+                                                    .textInputAutocapitalization(.characters)
+                                                    .autocorrectionDisabled()
+                                                    .textFieldStyle(.roundedBorder)
+
+                                                    Button {
+
+                                                        bluetooth.writeCharacteristic(
+                                                            characteristic,
+                                                            hexadecimalValue: writeValues[characteristic.id] ?? ""
+                                                        )
+
+                                                    } label: {
+
+                                                        Label(
+                                                            "Enviar dados",
+                                                            systemImage: "paperplane"
+                                                        )
+                                                    }
+                                                    .buttonStyle(.borderedProminent)
+                                                }
+                                                .padding(.vertical, 5)
                                             }
                                         }
                                     }

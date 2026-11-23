@@ -676,6 +676,43 @@ final class BluetoothManager: NSObject,
         }
     }
 
+    // MARK: - Retorno da escrita BLE
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didWriteValueFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+
+        let characteristicUUID = characteristic.uuid.uuidString
+
+        if let error = error {
+
+            status = "Erro durante a escrita BLE"
+
+            registerDiagnosticEvent(
+                """
+                Falha na escrita BLE:
+                Característica: \(characteristicUUID)
+                Erro: \(error.localizedDescription)
+                """
+            )
+
+            return
+        }
+
+        status = "Escrita BLE confirmada"
+
+        registerDiagnosticEvent(
+            """
+            Escrita BLE confirmada:
+            Característica: \(characteristicUUID)
+            Serviço: \(characteristic.service?.uuid.uuidString ?? "Desconhecido")
+            """
+        )
+    }
+
+
     // MARK: - Descoberta de características
 
     func peripheral(
@@ -838,6 +875,128 @@ final class BluetoothManager: NSObject,
             for: info.characteristic
         )
     }
+
+    // MARK: - Escrita de características
+
+    func writeCharacteristic(
+        _ info: BluetoothCharacteristicInfo,
+        hexadecimalValue: String
+    ) {
+
+        guard isConnected,
+              let peripheral = connectedPeripheral else {
+
+            status = "Nenhum dispositivo conectado"
+            return
+        }
+
+        let normalizedValue = hexadecimalValue
+            .replacingOccurrences(
+                of: "0x",
+                with: "",
+                options: .caseInsensitive
+            )
+
+        let components = normalizedValue.split {
+            $0.isWhitespace || $0 == "," || $0 == ":"
+        }
+
+        guard !components.isEmpty else {
+
+            status = "Informe os dados em hexadecimal"
+            return
+        }
+
+        var bytes: [UInt8] = []
+
+        for component in components {
+
+            guard let byte = UInt8(component, radix: 16) else {
+
+                status = "Valor hexadecimal inválido"
+
+                registerDiagnosticEvent(
+                    "Escrita cancelada: hexadecimal inválido"
+                )
+
+                return
+            }
+
+            bytes.append(byte)
+        }
+
+        let writeType: CBCharacteristicWriteType
+
+        if info.isWritable {
+
+            writeType = .withResponse
+
+        } else if info.supportsWriteWithoutResponse {
+
+            writeType = .withoutResponse
+
+        } else {
+
+            status = "Característica não permite escrita"
+            return
+        }
+
+        let data = Data(bytes)
+
+        let maximumLength = peripheral.maximumWriteValueLength(
+            for: writeType
+        )
+
+        guard data.count <= maximumLength else {
+
+            status = "Dados excedem o tamanho máximo permitido"
+
+            registerDiagnosticEvent(
+                "Escrita cancelada: \(data.count) bytes; máximo: \(maximumLength)"
+            )
+
+            return
+        }
+
+        if writeType == .withoutResponse,
+           !peripheral.canSendWriteWithoutResponse {
+
+            status = "Aguardando disponibilidade para envio"
+
+            registerDiagnosticEvent(
+                "Escrita sem resposta não enviada: canal BLE indisponível"
+            )
+
+            return
+        }
+
+        let hexadecimal = bytes
+            .map { String(format: "%02X", $0) }
+            .joined(separator: " ")
+
+        status = writeType == .withResponse
+            ? "Aguardando confirmação da escrita..."
+            : "Dados enviados sem confirmação individual"
+
+        registerDiagnosticEvent(
+            """
+            Solicitação de escrita BLE:
+            Característica: \(info.uuid)
+            Tipo: \(writeType == .withResponse
+                ? "Com resposta"
+                : "Sem resposta")
+            Dados: \(hexadecimal)
+            Bytes: \(data.count)
+            """
+        )
+
+        peripheral.writeValue(
+            data,
+            for: info.characteristic,
+            type: writeType
+        )
+    }
+
 
     // MARK: - Estado das notificações
 
