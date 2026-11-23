@@ -579,6 +579,7 @@ final class BluetoothManager: NSObject,
     }
 
     
+    
     // MARK: - Descoberta de características
 
     func peripheral(
@@ -597,6 +598,11 @@ final class BluetoothManager: NSObject,
         }
 
         guard let characteristics = service.characteristics else {
+
+            registerDiagnosticEvent(
+                "Nenhuma característica encontrada no serviço \(service.uuid.uuidString)"
+            )
+
             return
         }
 
@@ -610,6 +616,15 @@ final class BluetoothManager: NSObject,
             "2A19"  // Bateria
         ]
 
+        registerDiagnosticEvent(
+            """
+            Serviço analisado:
+            \(service.uuid.uuidString)
+            Nome: \(BluetoothUUIDCatalog.serviceName(for: service.uuid.uuidString))
+            Características: \(characteristics.count)
+            """
+        )
+
         for characteristic in characteristics {
 
             let info = BluetoothCharacteristicInfo(
@@ -621,20 +636,48 @@ final class BluetoothManager: NSObject,
             ) {
 
                 discoveredCharacteristics.append(info)
+            }
 
-                let uuid = characteristic.uuid.uuidString.uppercased()
+            // Registro detalhado da característica.
+            registerDiagnosticEvent(
+                """
+                Característica encontrada:
+                Nome: \(info.characteristicName)
+                UUID: \(info.uuid)
+                Serviço: \(info.serviceUUID)
+                Propriedades:
+                \(info.propertiesDescription)
+                """
+            )
 
-                // Leitura automática somente das características selecionadas.
-                if info.isReadable && automaticReadUUIDs.contains(uuid) {
+            // Compara UUIDs usando CBUUID.
+            let shouldReadAutomatically = automaticReadUUIDs.contains {
+                characteristic.uuid == CBUUID(string: $0)
+            }
 
-                    peripheral.readValue(for: characteristic)
+            if info.isReadable && shouldReadAutomatically {
 
-                    registerDiagnosticEvent(
-                        "Leitura automática solicitada: \(uuid)"
-                    )
-                }
+                registerDiagnosticEvent(
+                    "Solicitando leitura automática: \(info.uuid)"
+                )
+
+                peripheral.readValue(for: characteristic)
+
+            } else if shouldReadAutomatically {
+
+                registerDiagnosticEvent(
+                    "Leitura automática indisponível: \(info.uuid)"
+                )
             }
         }
+
+        status = "Características Bluetooth identificadas"
+
+        registerDiagnosticEvent(
+            "\(characteristics.count) característica(s) processadas no serviço \(service.uuid.uuidString)"
+        )
+    }
+
 
         status = "Características Bluetooth identificadas"
 
