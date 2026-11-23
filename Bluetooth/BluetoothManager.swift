@@ -178,6 +178,77 @@ final class BluetoothManager: NSObject,
     private var central: CBCentralManager!
     private var connectedPeripheral: CBPeripheral?
 
+    // MARK: - Resumo dos serviços GATT
+
+    var gattServicesSummary: String {
+
+        guard !discoveredServices.isEmpty else {
+            return "Nenhum serviço GATT identificado"
+        }
+
+        var categories: [String: Int] = [:]
+
+        for uuid in discoveredServices {
+
+            let category =
+                BluetoothUUIDCatalog.serviceCategory(for: uuid)
+
+            categories[category, default: 0] += 1
+        }
+
+        let categoryLines = categories
+            .sorted { $0.key < $1.key }
+            .map { item in
+                "\(item.key): \(item.value)"
+            }
+
+        return """
+        Total de serviços: \(discoveredServices.count)
+
+        \(categoryLines.joined(separator: "\n"))
+        """
+    }
+
+    // MARK: - Resumo das características por serviço
+
+    var gattCharacteristicsSummary: String {
+
+        guard !discoveredCharacteristics.isEmpty else {
+            return "Nenhuma característica GATT identificada"
+        }
+
+        let groupedCharacteristics = Dictionary(
+            grouping: discoveredCharacteristics,
+            by: { $0.serviceUUID }
+        )
+
+        return groupedCharacteristics
+            .sorted { $0.key < $1.key }
+            .map { serviceUUID, characteristics in
+
+                let serviceName = characteristics.first?.serviceName
+                    ?? "Serviço desconhecido"
+
+                let characteristicLines = characteristics
+                    .map { characteristic in
+                        """
+                        - \(characteristic.characteristicName)
+                          UUID: \(characteristic.uuid)
+                          Propriedades: \(characteristic.propertiesDescription)
+                          Permissões: \(characteristic.permissionsSummary)
+                          Valor: \(characteristic.value)
+                        """
+                    }
+
+                return """
+                \(serviceName)
+                UUID: \(serviceUUID)
+                \(characteristicLines.joined(separator: "\n"))
+                """
+            }
+            .joined(separator: "\n\n")
+    }
+
     // MARK: - Relatório de diagnóstico
 
     var diagnosticReport: String {
@@ -204,7 +275,17 @@ final class BluetoothManager: NSObject,
         Notificações: \(notificationEvents.count)
 
 
-        SERVIÇOS GATT:
+            RESUMO DOS SERVIÇOS GATT:
+
+               \(gattServicesSummary)
+
+
+        RESUMO DAS CARACTERÍSTICAS GATT:
+
+        \(gattCharacteristicsSummary)
+
+
+        SERVIÇOS GATT IDENTIFICADOS:
 
         \(discoveredServices.joined(separator: "\n"))
 
@@ -593,11 +674,8 @@ final class BluetoothManager: NSObject,
                 for: service
             )
         }
-
     }
 
-    
-    
     // MARK: - Descoberta de características
 
     func peripheral(
@@ -692,11 +770,9 @@ final class BluetoothManager: NSObject,
         status = "Características Bluetooth identificadas"
 
         registerDiagnosticEvent(
-        "\(characteristics.count) característica(s) processadas no serviço \(service.uuid.uuidString)"
-        )  
-        
+            "\(characteristics.count) característica(s) processadas no serviço \(service.uuid.uuidString)"
+        )
     }
-
 
     // MARK: - Leitura de características
 
@@ -813,7 +889,6 @@ final class BluetoothManager: NSObject,
         registerDiagnosticEvent(message)
     }
 
-  
     // MARK: - Atualização e interpretação de valores
 
     func peripheral(
