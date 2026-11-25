@@ -69,7 +69,7 @@ struct DashboardView: View {
 
                 List {
 
-                    // MARK: Dispositivos encontrados
+                    // MARK: - Dispositivos encontrados
 
                     Section("Dispositivos encontrados") {
 
@@ -86,7 +86,10 @@ struct DashboardView: View {
                                     bluetooth.connect(to: device)
                                 } label: {
 
-                                    VStack(alignment: .leading, spacing: 7) {
+                                    VStack(
+                                        alignment: .leading,
+                                        spacing: 7
+                                    ) {
 
                                         HStack {
 
@@ -111,6 +114,68 @@ struct DashboardView: View {
                                             .font(.caption2)
                                             .foregroundStyle(.secondary)
                                             .textSelection(.enabled)
+
+                                        Divider()
+
+                                        // Nome anunciado
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+
+                                            Text("Nome anunciado")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.advertisedName
+                                                    ?? "Não informado"
+                                            )
+                                            .font(.caption)
+                                            .textSelection(.enabled)
+                                        }
+
+                                        // Serviços anunciados
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+
+                                            Text("Serviços anunciados")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.advertisedServices.isEmpty
+                                                    ? "Nenhum serviço anunciado"
+                                                    : device.advertisedServices.joined(separator: ", ")
+                                            )
+                                            .font(.caption2)
+                                            .textSelection(.enabled)
+                                        }
+
+                                        // Dados do fabricante
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+
+                                            Text("Dados do fabricante")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.manufacturerData
+                                                    ?? "Não informado"
+                                            )
+                                            .font(.caption2)
+                                            .textSelection(.enabled)
+                                        }
+
+                                        Divider()
 
                                         HStack {
 
@@ -179,6 +244,7 @@ struct DashboardView: View {
                         } header: {
 
                             HStack {
+
                                 Text("Serviços GATT")
 
                                 Spacer()
@@ -456,6 +522,7 @@ struct DashboardView: View {
                         } header: {
 
                             HStack {
+
                                 Text("Características Bluetooth")
 
                                 Spacer()
