@@ -478,6 +478,45 @@ final class BluetoothManager: NSObject,
             String(format: "%02X", $0)
         }.joined(separator: " ")
 
+        // Potência de transmissão
+
+        let txPower = (
+            advertisementData[CBAdvertisementDataTxPowerLevelKey] as? NSNumber
+        )?.intValue
+
+        // Possibilidade de conexão
+
+        let isConnectable = (
+            advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber
+        )?.boolValue
+
+        // Serviços solicitados
+
+        let solicitedServices = (
+            advertisementData[CBAdvertisementDataSolicitedServiceUUIDsKey] as? [CBUUID] ?? []
+        ).map {
+            $0.uuidString
+        }
+
+        // Dados associados aos serviços
+
+        let serviceData = (
+            advertisementData[CBAdvertisementDataServiceDataKey] as? [CBUUID: Data] ?? [:]
+        ).reduce(into: [String: String]()) { result, entry in
+
+            result[entry.key.uuidString] = entry.value.map {
+                String(format: "%02X", $0)
+            }.joined(separator: " ")
+        }
+
+        // Serviços em overflow
+
+        let overflowServices = (
+            advertisementData[CBAdvertisementDataOverflowServiceUUIDsKey] as? [CBUUID] ?? []
+        ).map {
+            $0.uuidString
+        }
+
         // Criação do dispositivo
 
         let device = WatchDevice(
@@ -485,7 +524,12 @@ final class BluetoothManager: NSObject,
             rssi: RSSI.intValue,
             advertisedName: advertisedName,
             advertisedServices: advertisedServices,
-            manufacturerData: manufacturerHex
+            manufacturerData: manufacturerHex,
+            txPower: txPower,
+            isConnectable: isConnectable,
+            solicitedServices: solicitedServices,
+            serviceData: serviceData,
+            overflowServices: overflowServices
         )
 
         // Atualização ou inclusão na lista
@@ -504,12 +548,34 @@ final class BluetoothManager: NSObject,
                 ? "Nenhum serviço anunciado"
                 : advertisedServices.joined(separator: ", ")
 
+            let solicitedDescription = solicitedServices.isEmpty
+                ? "Nenhum serviço solicitado"
+                : solicitedServices.joined(separator: ", ")
+
+            let serviceDataDescription = serviceData.isEmpty
+                ? "Nenhum dado de serviço"
+                : serviceData.map {
+                    "\($0.key): \($0.value)"
+                }.sorted().joined(separator: "\n")
+
+            let overflowDescription = overflowServices.isEmpty
+                ? "Nenhum serviço em overflow"
+                : overflowServices.joined(separator: ", ")
+
+            // Registro de diagnóstico
+
             registerDiagnosticEvent(
                 """
                 Dispositivo encontrado: \(device.name)
                 Nome anunciado: \(advertisedName ?? "Não informado")
                 RSSI: \(device.rssi) dBm
+                TX Power: \(txPower.map { "\($0) dBm" } ?? "Não informado")
+                Connectable: \(isConnectable.map { "\($0)" } ?? "Não informado")
                 Serviços anunciados: \(servicesDescription)
+                Serviços solicitados: \(solicitedDescription)
+                Dados de serviço:
+                \(serviceDataDescription)
+                Serviços em overflow: \(overflowDescription)
                 Fabricante: \(manufacturerHex ?? "Não informado")
                 Identificador: \(device.id.uuidString)
                 """

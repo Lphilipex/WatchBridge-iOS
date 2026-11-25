@@ -15,6 +15,14 @@ struct WatchDevice: Identifiable {
     let advertisedServices: [String]
     let manufacturerData: String?
 
+    // MARK: - Informações adicionais do anúncio BLE
+
+    let txPower: Int?
+    let isConnectable: Bool?
+    let solicitedServices: [String]
+    let serviceData: [String: String]
+    let overflowServices: [String]
+
     // MARK: - Identificação
 
     var id: UUID {
