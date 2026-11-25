@@ -334,9 +334,86 @@ struct DashboardView: View {
                         }
                     }
 
-                    // MARK: - Serviços GATT
+                    // MARK: - Seções disponíveis quando conectado
 
                     if bluetooth.isConnected {
+
+                        // MARK: - Identificação do dispositivo
+
+                        Section("Identificação do dispositivo") {
+
+                            LabeledContent("Fabricante") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A29",
+                                        label: "Fabricante"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+
+                            LabeledContent("Modelo") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A24",
+                                        label: "Modelo"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+
+                            LabeledContent("Número de série") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A25",
+                                        label: "Número de série"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+
+                            LabeledContent("Firmware") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A26",
+                                        label: "Firmware"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+
+                            LabeledContent("Hardware") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A27",
+                                        label: "Hardware"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+
+                            LabeledContent("Software") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A28",
+                                        label: "Software"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+
+                            LabeledContent("Bateria") {
+                                Text(
+                                    deviceInformationValue(
+                                        for: "2A19",
+                                        label: "Bateria"
+                                    )
+                                )
+                                .textSelection(.enabled)
+                            }
+                        }
+
+                        // MARK: - Serviços GATT
 
                         Section {
 
@@ -781,6 +858,65 @@ struct DashboardView: View {
             .navigationTitle("WatchBridge")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    // MARK: - Informações do dispositivo
+
+    private func deviceInformationValue(
+        for uuid: String,
+        label: String
+    ) -> String {
+
+        guard let characteristic = bluetooth.discoveredCharacteristics.first(
+            where: {
+                normalizeBluetoothUUID($0.uuid) == uuid
+            }
+        ) else {
+            return "Não disponibilizado"
+        }
+
+        guard characteristic.isReadable else {
+            return "Leitura não disponível"
+        }
+
+        if characteristic.value == "Ainda não consultada" {
+            return "Aguardando leitura"
+        }
+
+        let prefix = "\(label): "
+
+        if characteristic.value.hasPrefix(prefix) {
+
+            return String(
+                characteristic.value.dropFirst(prefix.count)
+            )
+        }
+
+        return characteristic.value
+    }
+
+    // MARK: - Normalização de UUID
+
+    private func normalizeBluetoothUUID(_ uuid: String) -> String {
+
+        let normalized = uuid
+            .uppercased()
+            .replacingOccurrences(of: "-", with: "")
+
+        if normalized.count == 4 {
+            return normalized
+        }
+
+        let bluetoothBase = "00001000800000805F9B34FB"
+
+        if normalized.count == 32,
+           normalized.hasPrefix("0000"),
+           normalized.hasSuffix(bluetoothBase) {
+
+            return String(normalized.prefix(8).suffix(4))
+        }
+
+        return normalized
     }
 
     // MARK: - Indicador de capacidade

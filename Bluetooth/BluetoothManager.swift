@@ -848,12 +848,13 @@ final class BluetoothManager: NSObject,
         // Características padrão que serão lidas automaticamente.
 
         let automaticReadUUIDs: Set<String> = [
-            "2A29",
-            "2A24",
-            "2A26",
-            "2A27",
-            "2A28",
-            "2A19"
+            "2A29", // Fabricante
+            "2A24", // Modelo
+            "2A25", // Número de série
+            "2A26", // Firmware
+            "2A27", // Hardware
+            "2A28", // Software
+            "2A19"  // Bateria
         ]
 
         registerDiagnosticEvent(
