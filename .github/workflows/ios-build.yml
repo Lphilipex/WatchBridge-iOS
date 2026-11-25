@@ -12,9 +12,9 @@ permissions:
 
 jobs:
   build:
-    name: Build iOS App
+    name: Build iOS IPA
     runs-on: macos-15
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Baixar código do repositório
@@ -27,10 +27,7 @@ jobs:
         env:
           HOMEBREW_NO_AUTO_UPDATE: 1
         run: |
-          if command -v xcodegen >/dev/null 2>&1; then
-            echo "XcodeGen já está instalado."
-          else
-            echo "Instalando XcodeGen..."
+          if ! command -v xcodegen >/dev/null 2>&1; then
             brew install xcodegen
           fi
 
@@ -39,26 +36,33 @@ jobs:
       - name: Gerar projeto Xcode
         run: xcodegen generate
 
-      - name: Compilar aplicativo
+      - name: Compilar para iPhone
         run: |
           xcodebuild \
             -project WatchBridge.xcodeproj \
             -scheme WatchBridge \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Compactar aplicativo
+      - name: Preparar aplicativo IPA
         run: |
-          cd build/Build/Products/Debug-iphonesimulator
-          zip -r WatchBridge-Simulator.zip WatchBridge.app
+          mkdir -p build/Payload
 
-      - name: Disponibilizar aplicativo compilado
+          cp -R \
+            build/Build/Products/Release-iphoneos/WatchBridge.app \
+            build/Payload/WatchBridge.app
+
+          cd build
+
+          zip -r WatchBridge.ipa Payload
+
+      - name: Disponibilizar IPA
         uses: actions/upload-artifact@v4
         with:
-          name: WatchBridge-Simulator
-          path: build/Build/Products/Debug-iphonesimulator/WatchBridge-Simulator.zip
+          name: WatchBridge-IPA
+          path: build/WatchBridge.ipa
           retention-days: 7
