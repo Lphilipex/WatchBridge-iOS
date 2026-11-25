@@ -15,6 +15,11 @@ struct WatchDevice: Identifiable {
     let advertisedServices: [String]
     let manufacturerData: String?
 
+    // MARK: - Fabricante identificado
+
+    let manufacturerName: String?
+    let manufacturerCompanyIdentifier: UInt16?
+
     // MARK: - Informações adicionais do anúncio BLE
 
     let txPower: Int?
@@ -41,7 +46,12 @@ struct WatchDevice: Identifiable {
         let deviceName = name.lowercased()
 
         return deviceName.contains("galaxy watch")
-            || deviceName.contains("samsung")
             || deviceName.contains("sm-r")
+    }
+
+    // MARK: - Identificação Samsung
+
+    var isSamsungDevice: Bool {
+        manufacturerCompanyIdentifier == 0x0075
     }
 }

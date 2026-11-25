@@ -469,7 +469,7 @@ final class BluetoothManager: NSObject,
             $0.uuidString
         }
 
-        // Dados do fabricante
+        // Dados originais do fabricante
 
         let manufacturerData =
             advertisementData[CBAdvertisementDataManufacturerDataKey] as? Data
@@ -477,6 +477,33 @@ final class BluetoothManager: NSObject,
         let manufacturerHex = manufacturerData?.map {
             String(format: "%02X", $0)
         }.joined(separator: " ")
+
+        // Identificação do fabricante
+
+        var manufacturerCompanyIdentifier: UInt16?
+        var manufacturerName: String?
+
+        if let manufacturerData {
+
+            let manufacturerBytes = [UInt8](manufacturerData)
+
+            if manufacturerBytes.count >= 2 {
+
+                let identifier = UInt16(manufacturerBytes[0])
+                    | (UInt16(manufacturerBytes[1]) << 8)
+
+                manufacturerCompanyIdentifier = identifier
+
+                switch identifier {
+
+                case 0x0075:
+                    manufacturerName = "Samsung Electronics"
+
+                default:
+                    manufacturerName = nil
+                }
+            }
+        }
 
         // Potência de transmissão
 
@@ -525,6 +552,8 @@ final class BluetoothManager: NSObject,
             advertisedName: advertisedName,
             advertisedServices: advertisedServices,
             manufacturerData: manufacturerHex,
+            manufacturerName: manufacturerName,
+            manufacturerCompanyIdentifier: manufacturerCompanyIdentifier,
             txPower: txPower,
             isConnectable: isConnectable,
             solicitedServices: solicitedServices,
@@ -562,6 +591,11 @@ final class BluetoothManager: NSObject,
                 ? "Nenhum serviço em overflow"
                 : overflowServices.joined(separator: ", ")
 
+            let companyIdentifierDescription =
+                manufacturerCompanyIdentifier.map {
+                    String(format: "0x%04X", $0)
+                } ?? "Não identificado"
+
             // Registro de diagnóstico
 
             registerDiagnosticEvent(
@@ -576,7 +610,9 @@ final class BluetoothManager: NSObject,
                 Dados de serviço:
                 \(serviceDataDescription)
                 Serviços em overflow: \(overflowDescription)
-                Fabricante: \(manufacturerHex ?? "Não informado")
+                Fabricante identificado: \(manufacturerName ?? "Não identificado")
+                Company Identifier: \(companyIdentifierDescription)
+                Manufacturer Data original: \(manufacturerHex ?? "Não informado")
                 Identificador: \(device.id.uuidString)
                 """
             )
