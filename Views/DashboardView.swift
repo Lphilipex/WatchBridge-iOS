@@ -174,6 +174,94 @@ struct DashboardView: View {
                                             .font(.caption2)
                                             .textSelection(.enabled)
                                         }
+                                        // MARK: - Informações adicionais BLE
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+                                            Text("TX Power")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.txPower.map {
+                                                    "\($0) dBm"
+                                                } ?? "Não informado"
+                                            )
+                                            .font(.caption2)
+                                        }
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+                                            Text("Connectable")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.isConnectable.map {
+                                                    $0 ? "Sim" : "Não"
+                                                } ?? "Não informado"
+                                            )
+                                            .font(.caption2)
+                                        }
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+                                            Text("Serviços solicitados")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.solicitedServices.isEmpty
+                                                    ? "Nenhum serviço solicitado"
+                                                    : device.solicitedServices.joined(separator: ", ")
+                                            )
+                                            .font(.caption2)
+                                            .textSelection(.enabled)
+                                        }
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+                                            Text("Dados dos serviços")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.serviceData.isEmpty
+                                                    ? "Nenhum dado de serviço"
+                                                    : device.serviceData.map {
+                                                        "\($0.key): \($0.value)"
+                                                    }
+                                                    .sorted()
+                                                    .joined(separator: "\n")
+                                            )
+                                            .font(.caption2)
+                                            .textSelection(.enabled)
+                                        }
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 3
+                                        ) {
+                                            Text("Serviços em overflow")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+
+                                            Text(
+                                                device.overflowServices.isEmpty
+                                                    ? "Nenhum serviço em overflow"
+                                                    : device.overflowServices.joined(separator: ", ")
+                                            )
+                                            .font(.caption2)
+                                            .textSelection(.enabled)
+                                        }
 
                                         Divider()
 
