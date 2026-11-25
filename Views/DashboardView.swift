@@ -82,209 +82,254 @@ struct DashboardView: View {
 
                             ForEach(bluetooth.devices) { device in
 
-                                Button {
-                                    bluetooth.connect(to: device)
-                                } label: {
+                                VStack(
+                                    alignment: .leading,
+                                    spacing: 10
+                                ) {
 
-                                    VStack(
-                                        alignment: .leading,
-                                        spacing: 7
-                                    ) {
+                                    // MARK: - Resumo do dispositivo
 
-                                        HStack {
+                                    HStack {
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 4
+                                        ) {
 
                                             Text(device.name)
                                                 .font(.headline)
                                                 .foregroundStyle(.primary)
 
-                                            Spacer()
-
-                                            if device.isLikelyGalaxyWatch {
-
-                                                Label(
-                                                    "Samsung?",
-                                                    systemImage: "applewatch"
-                                                )
-                                                .font(.caption)
-                                                .foregroundStyle(.green)
-                                            }
+                                            Text(device.id.uuidString)
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                                .textSelection(.enabled)
                                         }
 
-                                        Text(device.id.uuidString)
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
+                                        Spacer()
 
-                                        Divider()
+                                        if device.isLikelyGalaxyWatch {
 
-                                        // Nome anunciado
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-
-                                            Text("Nome anunciado")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.advertisedName
-                                                    ?? "Não informado"
+                                            Label(
+                                                "Samsung?",
+                                                systemImage: "applewatch"
                                             )
                                             .font(.caption)
-                                            .textSelection(.enabled)
+                                            .foregroundStyle(.green)
                                         }
+                                    }
 
-                                        // Serviços anunciados
+                                    // MARK: - Informações rápidas
 
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
+                                    VStack(
+                                        alignment: .leading,
+                                        spacing: 6
+                                    ) {
 
-                                            Text("Serviços anunciados")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.advertisedServices.isEmpty
-                                                    ? "Nenhum serviço anunciado"
-                                                    : device.advertisedServices.joined(separator: ", ")
-                                            )
-                                            .font(.caption2)
-                                            .textSelection(.enabled)
-                                        }
-
-                                        // Dados do fabricante
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-
-                                            Text("Dados do fabricante")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.manufacturerData
-                                                    ?? "Não informado"
-                                            )
-                                            .font(.caption2)
-                                            .textSelection(.enabled)
-                                        }
-                                        // MARK: - Informações adicionais BLE
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-                                            Text("TX Power")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.txPower.map {
-                                                    "\($0) dBm"
-                                                } ?? "Não informado"
-                                            )
-                                            .font(.caption2)
-                                        }
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-                                            Text("Connectable")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.isConnectable.map {
-                                                    $0 ? "Sim" : "Não"
-                                                } ?? "Não informado"
-                                            )
-                                            .font(.caption2)
-                                        }
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-                                            Text("Serviços solicitados")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.solicitedServices.isEmpty
-                                                    ? "Nenhum serviço solicitado"
-                                                    : device.solicitedServices.joined(separator: ", ")
-                                            )
-                                            .font(.caption2)
-                                            .textSelection(.enabled)
-                                        }
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-                                            Text("Dados dos serviços")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.serviceData.isEmpty
-                                                    ? "Nenhum dado de serviço"
-                                                    : device.serviceData.map {
-                                                        "\($0.key): \($0.value)"
-                                                    }
-                                                    .sorted()
-                                                    .joined(separator: "\n")
-                                            )
-                                            .font(.caption2)
-                                            .textSelection(.enabled)
-                                        }
-
-                                        VStack(
-                                            alignment: .leading,
-                                            spacing: 3
-                                        ) {
-                                            Text("Serviços em overflow")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-
-                                            Text(
-                                                device.overflowServices.isEmpty
-                                                    ? "Nenhum serviço em overflow"
-                                                    : device.overflowServices.joined(separator: ", ")
-                                            )
-                                            .font(.caption2)
-                                            .textSelection(.enabled)
-                                        }
-
-                                        Divider()
-
-                                        HStack {
+                                        HStack(spacing: 16) {
 
                                             Label(
                                                 "\(device.rssi) dBm",
                                                 systemImage: "wifi"
                                             )
 
-                                            Spacer()
+                                            if let txPower = device.txPower {
 
-                                            Text("Toque para conectar")
-                                                .foregroundStyle(.blue)
+                                                Label(
+                                                    "\(txPower) dBm",
+                                                    systemImage: "antenna.radiowaves.left.and.right"
+                                                )
+                                            }
                                         }
-                                        .font(.caption)
+
+                                        if let isConnectable = device.isConnectable {
+
+                                            Label(
+                                                isConnectable
+                                                    ? "Conectável"
+                                                    : "Não conectável",
+                                                systemImage: isConnectable
+                                                    ? "checkmark.circle"
+                                                    : "xmark.circle"
+                                            )
+                                        }
                                     }
-                                    .padding(.vertical, 4)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+
+                                    // MARK: - Detalhes técnicos
+
+                                    DisclosureGroup {
+
+                                        VStack(
+                                            alignment: .leading,
+                                            spacing: 12
+                                        ) {
+
+                                            // Nome anunciado
+
+                                            VStack(
+                                                alignment: .leading,
+                                                spacing: 3
+                                            ) {
+
+                                                Text("Nome anunciado")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+
+                                                Text(
+                                                    device.advertisedName
+                                                        ?? "Não informado"
+                                                )
+                                                .font(.caption)
+                                                .textSelection(.enabled)
+                                            }
+
+                                            Divider()
+
+                                            // Serviços anunciados
+
+                                            VStack(
+                                                alignment: .leading,
+                                                spacing: 3
+                                            ) {
+
+                                                Text("Serviços anunciados")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+
+                                                Text(
+                                                    device.advertisedServices.isEmpty
+                                                        ? "Nenhum serviço anunciado"
+                                                        : device.advertisedServices.joined(separator: ", ")
+                                                )
+                                                .font(.caption2)
+                                                .textSelection(.enabled)
+                                            }
+
+                                            Divider()
+
+                                            // Dados do fabricante
+
+                                            VStack(
+                                                alignment: .leading,
+                                                spacing: 3
+                                            ) {
+
+                                                Text("Dados do fabricante")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+
+                                                Text(
+                                                    device.manufacturerData
+                                                        ?? "Não informado"
+                                                )
+                                                .font(.caption2)
+                                                .textSelection(.enabled)
+                                            }
+
+                                            Divider()
+
+                                            // Serviços solicitados
+
+                                            VStack(
+                                                alignment: .leading,
+                                                spacing: 3
+                                            ) {
+
+                                                Text("Serviços solicitados")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+
+                                                Text(
+                                                    device.solicitedServices.isEmpty
+                                                        ? "Nenhum serviço solicitado"
+                                                        : device.solicitedServices.joined(separator: ", ")
+                                                )
+                                                .font(.caption2)
+                                                .textSelection(.enabled)
+                                            }
+
+                                            Divider()
+
+                                            // Dados dos serviços
+
+                                            VStack(
+                                                alignment: .leading,
+                                                spacing: 3
+                                            ) {
+
+                                                Text("Dados dos serviços")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+
+                                                Text(
+                                                    device.serviceData.isEmpty
+                                                        ? "Nenhum dado de serviço"
+                                                        : device.serviceData.map {
+                                                            "\($0.key): \($0.value)"
+                                                        }
+                                                        .sorted()
+                                                        .joined(separator: "\n")
+                                                )
+                                                .font(.caption2)
+                                                .textSelection(.enabled)
+                                            }
+
+                                            Divider()
+
+                                            // Serviços em overflow
+
+                                            VStack(
+                                                alignment: .leading,
+                                                spacing: 3
+                                            ) {
+
+                                                Text("Serviços em overflow")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+
+                                                Text(
+                                                    device.overflowServices.isEmpty
+                                                        ? "Nenhum serviço em overflow"
+                                                        : device.overflowServices.joined(separator: ", ")
+                                                )
+                                                .font(.caption2)
+                                                .textSelection(.enabled)
+                                            }
+                                        }
+                                        .padding(.top, 8)
+
+                                    } label: {
+
+                                        Label(
+                                            "Detalhes técnicos BLE",
+                                            systemImage: "antenna.radiowaves.left.and.right"
+                                        )
+                                        .font(.subheadline)
+                                    }
+
+                                    // MARK: - Conectar
+
+                                    Button {
+
+                                        bluetooth.connect(to: device)
+
+                                    } label: {
+
+                                        Label(
+                                            "Conectar ao dispositivo",
+                                            systemImage: "link"
+                                        )
+                                        .frame(maxWidth: .infinity)
+                                    }
+                                    .buttonStyle(.borderedProminent)
+                                    .disabled(
+                                        bluetooth.isConnected ||
+                                        bluetooth.isConnecting
+                                    )
                                 }
-                                .disabled(
-                                    bluetooth.isConnected ||
-                                    bluetooth.isConnecting
-                                )
+                                .padding(.vertical, 8)
                             }
                         }
                     }
