@@ -1,8 +1,8 @@
 
-name: WatchBridge
+name: Ponte
 
 options:
-  bundleIdPrefix: com.watchbridge
+  bundleIdPrefix: com.ponte
   deploymentTarget:
     iOS: "17.0"
 
@@ -11,7 +11,7 @@ configs:
   Release: release
 
 targets:
-  WatchBridge:
+  Ponte:
     type: application
     platform: iOS
 
@@ -24,10 +24,10 @@ targets:
 
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.watchbridge.ios
-        PRODUCT_NAME: WatchBridge
+        PRODUCT_BUNDLE_IDENTIFIER: com.ponte.ios
+        PRODUCT_NAME: Ponte
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "O WatchBridge utiliza Bluetooth para procurar e testar a comunicação com dispositivos smartwatch."
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "O Ponte utiliza Bluetooth para procurar e testar a comunicacao com dispositivos smartwatch."

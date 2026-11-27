@@ -1,5 +1,5 @@
 
-name: WatchBridge iOS Build
+name: Ponte iOS Build
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build iOS IPA
+    name: Build Ponte iOS IPA
     runs-on: macos-15
     timeout-minutes: 20
 
@@ -39,8 +39,8 @@ jobs:
       - name: Compilar para iPhone
         run: |
           xcodebuild \
-            -project WatchBridge.xcodeproj \
-            -scheme WatchBridge \
+            -project Ponte.xcodeproj \
+            -scheme Ponte \
             -sdk iphoneos \
             -configuration Release \
             -destination 'generic/platform=iOS' \
@@ -53,16 +53,16 @@ jobs:
           mkdir -p build/Payload
 
           cp -R \
-            build/Build/Products/Release-iphoneos/WatchBridge.app \
-            build/Payload/WatchBridge.app
+            build/Build/Products/Release-iphoneos/Ponte.app \
+            build/Payload/Ponte.app
 
           cd build
 
-          zip -r WatchBridge.ipa Payload
+          zip -r Ponte.ipa Payload
 
       - name: Disponibilizar IPA
         uses: actions/upload-artifact@v4
         with:
-          name: WatchBridge-IPA
-          path: build/WatchBridge.ipa
+          name: Ponte-IPA
+          path: build/Ponte.ipa
           retention-days: 7

@@ -1,7 +1,8 @@
+
 import SwiftUI
 
 @main
-struct WatchBridgeApp: App {
+struct PonteApp: App {
 
     var body: some Scene {
         WindowGroup {
