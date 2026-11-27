@@ -1,4 +1,5 @@
 
+
 name: Ponte
 
 options:
@@ -22,6 +23,19 @@ targets:
       - path: Services
       - path: Views
 
+    info:
+      path: Ponte-Info.plist
+      properties:
+        UIBackgroundModes:
+          - bluetooth-central
+          - bluetooth-peripheral
+
+        NSBluetoothAlwaysUsageDescription: "O Ponte utiliza Bluetooth para procurar e testar a comunicacao com dispositivos smartwatch."
+
+        NSHealthShareUsageDescription: "O Ponte utiliza dados de saude para integrar as informacoes recebidas do smartwatch com o Apple Saude."
+
+        NSHealthUpdateUsageDescription: "O Ponte precisa salvar dados de frequencia cardiaca e passos no Apple Saude."
+
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ponte.ios
@@ -29,5 +43,5 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
-        GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: "O Ponte utiliza Bluetooth para procurar e testar a comunicacao com dispositivos smartwatch."
+
+        CODE_SIGN_ENTITLEMENTS: Ponte.entitlements

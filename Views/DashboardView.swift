@@ -4,6 +4,7 @@ import SwiftUI
 struct DashboardView: View {
 
     @StateObject private var bluetooth = BluetoothManager()
+    @StateObject private var appModel = AppModel()
 
     @State private var writeValues: [String: String] = [:]
 
@@ -17,7 +18,7 @@ struct DashboardView: View {
                     .font(.system(size: 55))
                     .foregroundStyle(.blue)
 
-                Text("WatchBridge")
+                Text("Ponte")
                     .font(.largeTitle.bold())
 
                 Text("Galaxy Watch 4 Classic")
@@ -70,6 +71,49 @@ struct DashboardView: View {
                 List {
 
                     // MARK: - Dispositivos encontrados
+
+                    // MARK: - Ponte Saúde
+
+                    Section("Ponte Saúde") {
+
+                        Text(appModel.status)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+
+                        Button("Autorizar acesso ao Apple Saúde") {
+                            appModel.requestHealthAccess()
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        if let heartRate = appModel.lastHeartRate {
+
+                            Label(
+                                "\(Int(heartRate)) bpm",
+                                systemImage: "heart.fill"
+                            )
+                            .foregroundStyle(.red)
+                        }
+
+                        Label(
+                            "\(Int(appModel.totalSteps)) passos recebidos",
+                            systemImage: "figure.walk"
+                        )
+
+                        if !appModel.log.isEmpty {
+
+                            DisclosureGroup("Histórico de comunicação") {
+
+                                ForEach(
+                                    Array(appModel.log.prefix(5).enumerated()),
+                                    id: \.offset
+                                ) { _, entry in
+
+                                    Text(entry)
+                                        .font(.caption)
+                                }
+                            }
+                        }
+                    }
 
                     Section("Dispositivos encontrados") {
 
@@ -855,7 +899,7 @@ struct DashboardView: View {
                 }
             }
             .padding()
-            .navigationTitle("WatchBridge")
+            .navigationTitle("Ponte")
             .navigationBarTitleDisplayMode(.inline)
         }
     }
